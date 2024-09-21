@@ -1,8 +1,7 @@
 # Audio Codecs
 
-A collection of audio codecs with a standardized API.
+A collection of audio codecs with a standardized API. The following codecs are currently supported:
 
-The following codecs are currently supported:
 - [DAC](https://arxiv.org/abs/2306.06546)
 - [EnCodec](https://arxiv.org/abs/2210.13438)
 - [EnCodec](https://arxiv.org/abs/2210.13438) + [Vocos](https://arxiv.org/abs/2306.00814)
