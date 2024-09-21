@@ -1,0 +1,8 @@
+descript-audio-codec
+huggingface_hub
+speechtokenizer
+torch
+torchaudio
+vocos
+-f git+https://github.com/haoheliu/SemantiCodec-inference.git@main
+-f git+https://github.com/huggingface/transformers.git@main

@@ -1,0 +1,53 @@
+repos:
+  - repo: local
+    hooks:
+      - id: isort
+        name: isort
+        language: system
+        entry: isort
+        types: [python]
+
+      - id: black
+        name: black
+        language: system
+        entry: black
+        types: [python]
+
+      - id: trailing-whitespace
+        name: trailing-whitespace
+        language: system
+        entry: trailing-whitespace-fixer
+        types: [python]
+
+      - id: end-of-file-fixer
+        name: end-of-file-fixer
+        language: system
+        entry: end-of-file-fixer
+        types: [python]
+
+      - id: mixed-line-ending
+        name: mixed-line-ending
+        language: system
+        entry: mixed-line-ending
+        types: [python]
+        args: ["--fix=lf"]
+
+      - id: fix-encoding-pragma
+        name: fix-encoding-pragma
+        language: system
+        entry: fix-encoding-pragma
+        types: [python]
+        args: ["--remove"]
+
+      - id: check-case-conflict
+        name: check-case-conflict
+        language: system
+        entry: check-case-conflict
+        types: [python]
+
+      - id: check-docstring-first
+        name: check-docstring-first
+        language: system
+        entry: check-docstring-first
+        types: [python]
+        exclude: version.py
