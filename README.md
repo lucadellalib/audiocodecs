@@ -27,12 +27,6 @@ pip install git+https://github.com/lucadellalib/audio-codecs.git@main
 
 ## ▶️ Quickstart
 
-To reconstruct the provided example audio, navigate to `audio_codecs`, open a terminal and run:
-
-```bash
-python <codec-name>.py
-```
-
 To use one of the available codecs in your script:
 
 ```python
