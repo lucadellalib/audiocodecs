@@ -36,13 +36,15 @@ python <codec-name>.py
 To use one of the available codecs in your script:
 
 ```
+import torch
 import torchaudio
 from audio_codecs import Encodec
 
 sig, sample_rate = torchaudio.load("<path-to-audio-file>")
 model = Encodec(sample_rate=sample_rate, orig_sample_rate=24000, num_codebooks=8)
 with torch.no_grad():
-    rec_sig = model(sig)
+    toks = model.sig_to_toks(sig)
+    rec_sig = model.toks_to_sig(toks)
 torchaudio.save("reconstruction.wav", rec_sig, sample_rate)
 ```
 
