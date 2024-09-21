@@ -41,7 +41,8 @@ from audio_codecs import Encodec
 
 sig, sample_rate = torchaudio.load("<path-to-audio-file>")
 model = Encodec(sample_rate=sample_rate, orig_sample_rate=24000, num_codebooks=8)
-rec_sig = model(sig)
+with torch.no_grad():
+    rec_sig = model(sig)
 torchaudio.save("reconstruction.wav", rec_sig, sample_rate)
 ```
 
