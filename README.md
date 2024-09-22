@@ -32,7 +32,7 @@ To use one of the available codecs in your script:
 ```python
 import torch
 import torchaudio
-from audio_codecs import Encodec
+from audiocodecs import Encodec
 
 sig, sample_rate = torchaudio.load("<path-to-audio-file>")
 model = Encodec(sample_rate=sample_rate, orig_sample_rate=24000, num_codebooks=8)

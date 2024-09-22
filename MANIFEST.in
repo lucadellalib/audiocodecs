@@ -1,4 +1,4 @@
 graft requirements
-include audio_codecs/example.wav
+include audiocodecs/example.wav
 global-exclude __pycache__
 global-exclude *.py[co]

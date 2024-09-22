@@ -59,7 +59,7 @@ def _parse_requirements(requirements_file):
     return requirements
 
 
-with open(os.path.join(_ROOT_DIR, "audio_codecs", "version.py")) as f:
+with open(os.path.join(_ROOT_DIR, "audiocodecs", "version.py")) as f:
     tmp = {}
     exec(f.read(), tmp)
     _VERSION = tmp["VERSION"]

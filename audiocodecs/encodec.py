@@ -21,7 +21,7 @@ import sys
 
 import torch
 
-from audio_codecs.codec import Codec
+from audiocodecs.codec import Codec
 
 
 __all__ = ["Encodec"]
