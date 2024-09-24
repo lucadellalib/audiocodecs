@@ -93,7 +93,7 @@ from setuptools import find_packages, setup  # noqa: E402
 
 
 setup(
-    name="audio-codecs",
+    name="audiocodecs",
     version=_VERSION,
     description="A collection of audio codecs with a standardized API",
     long_description=_README,
