@@ -100,7 +100,7 @@ setup(
     long_description_content_type="text/markdown",
     author="Luca Della Libera",
     author_email="luca.dellalib@gmail.com",
-    url="https://github.com/lucadellalib/audio-codecs",
+    url="https://github.com/lucadellalib/audiocodecs",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
