@@ -20,7 +20,7 @@ A collection of audio codecs with a standardized API. The following codecs are c
 First of all, install [Python 3.8 or later](https://www.python.org). Open a terminal and run:
 
 ```bash
-pip install git+https://github.com/lucadellalib/audio-codecs.git@main
+pip install git+https://github.com/lucadellalib/audiocodecs.git@main
 ```
 
 ---------------------------------------------------------------------------------------------------------
