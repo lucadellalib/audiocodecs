@@ -1,0 +1,14 @@
+beartype  # Required by SpeechTokenizer
+black
+descript-audio-codec
+huggingface_hub
+isort
+pre-commit
+pre-commit-hooks
+speechtokenizer
+tensorboard  # Required by SpeechTokenizer
+torch
+torchaudio
+transformers
+vocos
+-f git+https://github.com/haoheliu/SemantiCodec-inference.git@main

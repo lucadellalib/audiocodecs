@@ -1,17 +1,5 @@
 # ==============================================================================
-# Copyright 2024 Luca Della Libera.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright 2024 Luca Della Libera. All Rights Reserved.
 # ==============================================================================
 
 """WavTokenizer (see https://arxiv.org/abs/2408.16532)."""
@@ -29,13 +17,26 @@ __all__ = ["WavTokenizer"]
 
 
 class WavTokenizer(Codec):
+    SOURCES = [
+        "novateur/WavTokenizer-large-unify-40token",
+        "novateur/WavTokenizer-large-speech-75token",
+    ]
+    CONFIGS = [
+        "wavtokenizer_smalldata_frame40_3s_nq1_code4096_dim512_kmeans200_attn.yaml",
+        "wavtokenizer_smalldata_frame75_3s_nq1_code4096_dim512_kmeans200_attn.yaml",
+    ]
+    CHECKPOINTS = [
+        "wavtokenizer_large_unify_600_24k.ckpt",
+        "wavtokenizer_large_speech_320_24k.ckpt",
+    ]
+
     def __init__(
         self,
         sample_rate,
         mode="reconstruct",
-        source="novateur/WavTokenizer-medium-speech-75token",
-        config="wavtokenizer_mediumdata_frame75_3s_nq1_code4096_dim512_kmeans200_attn.yaml",
-        checkpoint="wavtokenizer_medium_speech_320_24k_v2.ckpt",
+        source="novateur/WavTokenizer-large-unify-40token",
+        config="wavtokenizer_smalldata_frame40_3s_nq1_code4096_dim512_kmeans200_attn.yaml",
+        checkpoint="wavtokenizer_large_unify_600_24k.ckpt",
     ):
         try:
             # Workaround to avoid name collisions with installed modules
@@ -55,8 +56,9 @@ class WavTokenizer(Codec):
         self.vocab_size = 4096
 
         path = snapshot_download(repo_id=source)
-        config_path = os.path.join(path, config)
         checkpoint_path = os.path.join(path, checkpoint)
+        path = snapshot_download(repo_id="novateur/WavTokenizer")
+        config_path = os.path.join(path, config)
         self.model = wavtokenizer.WavTokenizer.from_pretrained0802(
             config_path, checkpoint_path
         )

@@ -1,17 +1,5 @@
 # ==============================================================================
-# Copyright 2024 Luca Della Libera.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright 2024 Luca Della Libera. All Rights Reserved.
 # ==============================================================================
 
 """DAC (see https://arxiv.org/abs/2306.06546)."""
@@ -29,7 +17,11 @@ __all__ = ["DAC"]
 
 class DAC(Codec):
     def __init__(
-        self, sample_rate, orig_sample_rate=24000, mode="reconstruct", num_codebooks=8,
+        self,
+        sample_rate,
+        orig_sample_rate=24000,
+        mode="reconstruct",
+        num_codebooks=8,
     ):
         try:
             # Workaround to avoid name collisions with installed modules
@@ -107,7 +99,13 @@ if __name__ == "__main__":
 
     for mode in ["encode", "decode", "reconstruct"]:
         codec = (
-            DAC(sample_rate, mode=mode, num_codebooks=num_codebooks,).eval().to(device)
+            DAC(
+                sample_rate,
+                mode=mode,
+                num_codebooks=num_codebooks,
+            )
+            .eval()
+            .to(device)
         )
         input = (
             torch.zeros(batch_size, 10, num_codebooks).long()

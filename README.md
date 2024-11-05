@@ -17,10 +17,12 @@ A collection of audio codecs with a standardized API. The following codecs are c
 
 ### From source
 
-First of all, install [Python 3.8 or later](https://www.python.org). Open a terminal and run:
+First of all, install [Python 3.8 or later](https://www.python.org).
+Clone or download and extract the repository, navigate to `<path-to-repository>`, open a terminal and run:
 
 ```bash
-pip install git+https://github.com/lucadellalib/audiocodecs.git@main
+# Install the package locally in editable mode
+pip install -e .[all]
 ```
 
 ---------------------------------------------------------------------------------------------------------
@@ -41,6 +43,8 @@ with torch.no_grad():
     rec_sig = model.toks_to_sig(toks)
 torchaudio.save("reconstruction.wav", rec_sig, sample_rate)
 ```
+
+Check the `benchmarks` directory for code examples on how to implement downstream tasks.
 
 ---------------------------------------------------------------------------------------------------------
 

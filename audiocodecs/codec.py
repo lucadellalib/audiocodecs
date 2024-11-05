@@ -1,17 +1,5 @@
 # ==============================================================================
-# Copyright 2024 Luca Della Libera.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright 2024 Luca Della Libera. All Rights Reserved.
 # ==============================================================================
 
 """Codec interface."""
@@ -28,7 +16,7 @@ __all__ = ["Codec"]
 # B: batch size
 # T: sequence length in the time domain
 # N: sequeunce length in the token domain
-# C: number of tokens
+# C: vocabulary size (assuming that each codebook has the same number of tokens)
 # K: number of codebooks
 class Codec(torch.nn.Module, ABC):
     _MODES = ["encode", "decode", "reconstruct"]
@@ -56,7 +44,9 @@ class Codec(torch.nn.Module, ABC):
     def sig_to_toks(self, sig, length=None):
         # sig: [B, T]
         sig = torchaudio.functional.resample(
-            sig, self.sample_rate, self.orig_sample_rate,
+            sig,
+            self.sample_rate,
+            self.orig_sample_rate,
         )
         if length is None:
             length = torch.ones(len(sig), device=sig.device)
@@ -68,7 +58,9 @@ class Codec(torch.nn.Module, ABC):
             length = torch.ones(len(toks), device=toks.device)
         sig = self._toks_to_sig(toks, length)
         sig = torchaudio.functional.resample(
-            sig, self.orig_sample_rate, self.sample_rate,
+            sig,
+            self.orig_sample_rate,
+            self.sample_rate,
         )
         return sig
 

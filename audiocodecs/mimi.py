@@ -1,17 +1,5 @@
 # ==============================================================================
-# Copyright 2024 Luca Della Libera.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright 2024 Luca Della Libera. All Rights Reserved.
 # ==============================================================================
 
 """Mimi (see https://kyutai.org/Moshi.pdf)."""
@@ -26,14 +14,15 @@ __all__ = ["Mimi"]
 
 class Mimi(Codec):
     def __init__(
-        self, sample_rate, mode="reconstruct", num_codebooks=8,
+        self,
+        sample_rate,
+        mode="reconstruct",
+        num_codebooks=8,
     ):
         try:
             from transformers import MimiModel
         except ImportError:
-            raise ImportError(
-                "`pip install git+https://github.com/huggingface/transformers.git@main` to use this module"
-            )
+            raise ImportError("`pip install transformers>=4.45.1` to use this module")
 
         super().__init__(sample_rate, 24000, mode)
         self.num_codebooks = num_codebooks
@@ -63,7 +52,11 @@ class Mimi(Codec):
         abs_lens = sig.shape[-1] * length
         max_len = abs_lens.max().long().item()
         padding_mask = (
-            torch.arange(max_len, device=length.device, dtype=length.dtype,)[None]
+            torch.arange(
+                max_len,
+                device=length.device,
+                dtype=length.dtype,
+            )[None]
             < abs_lens[:, None]
         )
         output = self.model.encode(

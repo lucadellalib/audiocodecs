@@ -1,17 +1,5 @@
 # ==============================================================================
-# Copyright 2024 Luca Della Libera.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright 2024 Luca Della Libera. All Rights Reserved.
 # ==============================================================================
 
 """Setup script."""
@@ -80,6 +68,10 @@ _REQUIREMENTS_ALL = _parse_requirements(
     os.path.join(_ROOT_DIR, "requirements", "requirements-all.txt")
 )
 
+_REQUIREMENTS_DEV = _parse_requirements(
+    os.path.join(_ROOT_DIR, "requirements", "requirements-dev.txt")
+)
+
 # Manually preinstall setup requirements since build system specification in
 # pyproject.toml is not reliable. For example, when NumPy is preinstalled,
 # NumPy extensions are compiled with the latest compatible NumPy version
@@ -109,18 +101,16 @@ setup(
         "Intended Audience :: Developers",
         "Intended Audience :: Information Technology",
         "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    license="Apache License 2.0",
     keywords=["Audio", "Codecs", "PyTorch"],
     platforms=["OS Independent"],
     include_package_data=True,
     install_requires=_REQUIREMENTS_BASE,
-    extras_require={"all": _REQUIREMENTS_ALL},
+    extras_require={"all": _REQUIREMENTS_ALL, "dev": _REQUIREMENTS_DEV},
     python_requires=">=3.8",
 )
