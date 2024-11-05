@@ -44,7 +44,7 @@ with torch.no_grad():
 torchaudio.save("reconstruction.wav", rec_sig, sample_rate)
 ```
 
-Check the `benchmarks` directory for code examples on how to implement downstream tasks.
+Reference implementations of downstream tasks using audio codecs can be found in `benchmarks`.
 
 ---------------------------------------------------------------------------------------------------------
 
