@@ -15,7 +15,7 @@ class LinearPooling(nn.Module):
     def __init__(self, num_channels):
         super().__init__()
         self.num_channels = num_channels
-        self.mlp = nn.Linear(num_channels, 1)
+        self.mlp = nn.Linear(num_channels, 1, bias=False)
 
     def forward(self, x):
         # (B, N, K, H)

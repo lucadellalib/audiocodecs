@@ -11,4 +11,4 @@ torch
 torchaudio
 transformers
 vocos
--f git+https://github.com/haoheliu/SemantiCodec-inference.git@main
+git+https://github.com/haoheliu/SemantiCodec-inference@8dc464c3385d2389a695ed3f718f4a0caf3ed33f#egg=semanticodec

@@ -3,7 +3,7 @@
 # Authors: Luca Della Libera 2024
 # ###########################################################################################
 
-experiment_name: speechtokenizer
+experiment_name: mimi
 dataset: LibriMix
 task: ss
 
