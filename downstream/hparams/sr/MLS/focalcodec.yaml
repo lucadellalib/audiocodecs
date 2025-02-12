@@ -1,0 +1,87 @@
+# ###########################################################################################
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: focalcodec
+dataset: MLS
+task: sr
+
+# Seed needs to be set at top of YAML
+seed: 0
+__set_seed: !apply:torch.manual_seed [!ref <seed>]
+
+# Data preparation
+data_folder: !PLACEHOLDER
+test_csv: !ref <save_folder>/test.csv
+splits: [test]
+languages: null
+
+# Output folders
+output_folder: !ref results/<task>/<dataset>/<experiment_name>/<seed>
+save_folder: !ref <output_folder>/save
+cache_folder: !name:huggingface_hub.constants.HUGGINGFACE_HUB_CACHE
+
+# Save options
+compute_metrics: True
+save_audios: False
+use_profiler: True
+
+# Preprocessing parameters
+test_remove_if_longer: 60.0  # Seconds
+test_remove_if_shorter: 0.0  # Seconds
+
+# Test parameters
+test_batch_size: 1
+dataloader_workers: 4
+
+# Codec parameters
+sample_rate: 16000
+vocab_size: 8192
+num_codebooks: 1
+config: lucadellalib/focalcodec/LibriTTS960_50Hz
+mode: reconstruct
+
+# Performance metrics parameters
+dwer_hub: small
+wavlm_sim_hub: microsoft/wavlm-base-sv
+ecapatdnn_sim_hub: speechbrain/spkrec-ecapa-voxceleb
+
+# Codec
+codec: !new:audiocodecs.FocalCodec
+    sample_rate: !ref <sample_rate>
+    num_codebooks: !ref <num_codebooks>
+    vocab_size: !ref <vocab_size>
+    config: !ref <config>
+    mode: !ref <mode>
+
+# Performance metrics
+utmos_computer: !name:metrics.utmos.UTMOS
+    sample_rate: !ref <sample_rate>
+
+dnsmos_computer: !name:metrics.dnsmos.DNSMOS
+    sample_rate: !ref <sample_rate>
+
+stoi_computer: !name:metrics.stoi.STOI
+    sample_rate: !ref <sample_rate>
+
+pesq_computer: !name:metrics.pesq.PESQ
+    sample_rate: !ref <sample_rate>
+
+dwer_computer: !name:metrics.dwer.DWER
+    model_hub: !ref <dwer_hub>
+    sample_rate: !ref <sample_rate>
+    save_path: !ref <cache_folder>
+
+wavlm_sim_computer: !name:metrics.speaker_similarity.SpkSimWavLM
+    model_hub: !ref <wavlm_sim_hub>
+    save_path: !ref <cache_folder>
+    sample_rate: !ref <sample_rate>
+
+ecapatdnn_sim_computer: !name:metrics.speaker_similarity.SpkSimECAPATDNN
+    model_hub: !ref <ecapatdnn_sim_hub>
+    sample_rate: !ref <sample_rate>
+    save_path: !apply:os.path.join [!ref <cache_folder>, models--speechbrain--spkrec-ecapa-voxceleb]
+
+# Counters, checkpointers, loggers, etc.
+train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
+    save_file: !ref <output_folder>/train_log.txt

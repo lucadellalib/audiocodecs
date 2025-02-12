@@ -1,0 +1,218 @@
+# ###########################################################################################
+# Model: Llama 3 decoder
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: semanticodec
+dataset: LibriSpeech
+task: tts
+
+# Seed needs to be set at top of YAML
+seed: 0
+__set_seed: !apply:torch.manual_seed [!ref <seed>]
+
+# Data preparation
+data_folder: !PLACEHOLDER
+train_csv: [!ref <save_folder>/train-clean-100.csv, !ref <save_folder>/train-clean-360.csv]
+valid_csv: !ref <save_folder>/dev-clean.csv
+test_csv: !ref <save_folder>/test-clean.csv
+splits: [train-clean-100, train-clean-360, dev-clean, test-clean]
+
+# Output folders
+output_folder: !ref results/<task>/<dataset>/<experiment_name>/<seed>
+save_folder: !ref <output_folder>/save
+cache_folder: !name:huggingface_hub.constants.HUGGINGFACE_HUB_CACHE
+
+# Save options
+compute_metrics: True
+save_audios: False
+
+# Preprocessing parameters
+train_remove_if_longer: 60.0  # Seconds
+valid_remove_if_longer: 60.0  # Seconds
+test_remove_if_longer: 60.0  # Seconds
+train_remove_if_shorter: 0.0  # Seconds
+valid_remove_if_shorter: 0.0  # Seconds
+test_remove_if_shorter: 0.0  # Seconds
+sorting: ascending
+tok_cache_size: 5.e+9
+spk_cache_size: 5.e+9
+
+# Training parameters
+num_epochs: 100
+grad_accumulation_factor: 1
+train_batch_size: 16
+valid_batch_size: 1
+test_batch_size: 1
+dataloader_workers: 4
+nonfinite_patience: 10
+max_grad_norm: 0.01
+precision: fp32
+ckpt_interval_steps: 4000
+keep_checkpoints: 1
+
+# Special tokens
+bos_id: !ref <vocab_size>
+eos_id: !ref <vocab_size> + 1
+pad_id: 0
+
+# Optimizer parameters
+lr: 0.0001
+weight_decay: 0.01
+improvement_threshold: 0.0025
+annealing_factor: 0.9
+patient: 1
+
+# Tokenizer parameters
+num_tokens: 29  # If token_type=char, must be equal to the number of found characters
+token_type: char  # ["unigram", "bpe", "char"]
+character_coverage: 1.0
+
+# Codec parameters
+sample_rate: 16000
+num_codebooks: 2
+token_rate: 50
+vocab_size: 8192
+acoustic_vocab_size: 8192
+ddim_sample_step: 50
+mode: reconstruct
+
+# Speaker encoder parameters
+spk_dim: 512  # wavlm-base-sv
+
+# Embedding parameters
+embedding_dim: 1536
+pretrain_embeddings: True  # If True, must match the codec's embedding size
+freeze_embeddings: False
+
+# Decoder parameters
+n_layers: 12
+dim: 512
+n_heads: 4
+n_kv_heads: 1
+dropout: 0.1
+rope_theta: 10000.0
+max_seq_len: 8192
+
+# Search parameters
+top_p: 0.9
+temp: 1.0
+
+# Performance metrics parameters
+dwer_hub: small
+wavlm_sim_hub: microsoft/wavlm-base-sv
+ecapatdnn_sim_hub: speechbrain/spkrec-ecapa-voxceleb
+
+# Tokenizer
+tokenizer_cls: !name:speechbrain.tokenizers.SentencePiece.SentencePiece
+    model_dir: !ref <save_folder>
+    vocab_size: !ref <num_tokens>
+    annotation_train: !ref <save_folder>/train.csv
+    annotation_read: wrd
+    model_type: !ref <token_type>
+    character_coverage: !ref <character_coverage>
+
+# Codec
+codec: !new:audiocodecs.SemantiCodec
+    sample_rate: !ref <sample_rate>
+    token_rate: !ref <token_rate>
+    semantic_vocab_size: !ref <vocab_size>
+    ddim_sample_step: !ref <ddim_sample_step>
+    mode: !ref <mode>
+
+# Speaker encoder
+spk_encoder: !new:models.speaker_encoder.WavLM
+    model_hub: microsoft/wavlm-base-sv
+    save_path: !ref <cache_folder>
+    sample_rate: !ref <sample_rate>
+
+# Modules
+embedding: !new:torch.nn.Embedding
+    embedding_dim: !ref <spk_dim>
+    num_embeddings: !ref <num_tokens>
+    padding_idx: !ref <pad_id>
+
+decoder: !new:models.llama3.LlamaDecoder
+    vocab_size: !ref <vocab_size> + 2  # +2 for BOS/EOS
+    input_dim: !ref <embedding_dim>
+    n_layers: !ref <n_layers>
+    dim: !ref <dim>
+    n_heads: !ref <n_heads>
+    n_kv_heads: !ref <n_kv_heads>
+    dropout: !ref <dropout>
+    rope_theta: !ref <rope_theta>
+    max_seq_len: !ref <max_seq_len>
+    num_codebooks: !ref <num_codebooks>
+
+modules:
+    embedding: !ref <embedding>
+    decoder: !ref <decoder>
+
+model: !new:torch.nn.ModuleList
+    [[!ref <embedding>, !ref <decoder>]]
+
+# Loss functions
+ce_loss: !name:speechbrain.nnet.losses.nll_loss
+    label_smoothing: 0.0
+    allowed_len_diff: 0
+    reduction: mean
+
+# Optimizers
+opt_class: !name:torch.optim.AdamW
+    lr: !ref <lr>
+    betas: (0.9, 0.98)
+    eps: 1.e-8
+    weight_decay: !ref <weight_decay>
+
+# Schedulers
+scheduler: !new:speechbrain.nnet.schedulers.NewBobScheduler
+    initial_value: !ref <lr>
+    improvement_threshold: !ref <improvement_threshold>
+    annealing_factor: !ref <annealing_factor>
+    patient: !ref <patient>
+
+# Performance metrics
+ter_computer: !name:speechbrain.utils.metric_stats.MetricStats
+    metric: !name:speechbrain.nnet.losses.classification_error
+        reduction: batch
+
+utmos_computer: !name:metrics.utmos.UTMOS
+    sample_rate: !ref <sample_rate>
+
+dnsmos_computer: !name:metrics.dnsmos.DNSMOS
+    sample_rate: !ref <sample_rate>
+
+stoi_computer: !name:metrics.stoi.STOI
+    sample_rate: !ref <sample_rate>
+
+pesq_computer: !name:metrics.pesq.PESQ
+    sample_rate: !ref <sample_rate>
+
+dwer_computer: !name:metrics.dwer.DWER
+    model_hub: !ref <dwer_hub>
+    sample_rate: !ref <sample_rate>
+    save_path: !ref <cache_folder>
+
+wavlm_sim_computer: !name:metrics.speaker_similarity.SpkSimWavLM
+    model_hub: !ref <wavlm_sim_hub>
+    sample_rate: !ref <sample_rate>
+    save_path: !ref <cache_folder>
+
+ecapatdnn_sim_computer: !name:metrics.speaker_similarity.SpkSimECAPATDNN
+    model_hub: !ref <ecapatdnn_sim_hub>
+    sample_rate: !ref <sample_rate>
+    save_path: !apply:os.path.join [!ref <cache_folder>, models--speechbrain--spkrec-ecapa-voxceleb]
+
+# Counters, checkpointers, loggers, etc.
+epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
+    limit: !ref <num_epochs>
+
+checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
+    checkpoints_dir: !ref <save_folder>
+    recoverables:
+        model: !ref <model>
+        scheduler: !ref <scheduler>
+        counter: !ref <epoch_counter>
+
+train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
+    save_file: !ref <output_folder>/train_log.txt

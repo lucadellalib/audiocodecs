@@ -1,0 +1,14 @@
+beartype  # Required by SpeechTokenizer
+descript-audio-codec
+huggingface_hub
+speechtokenizer
+tensorboard  # Required by SpeechTokenizer
+torch
+torchaudio
+transformers
+vocos
+bigcodec @ git+https://github.com/lucadellalib/BigCodec.git@main#egg=bigcodec
+semanticodec @ git+https://github.com/haoheliu/SemantiCodec-inference@8dc464c3385d2389a695ed3f718f4a0caf3ed33f#egg=semanticodec
+speechbrain @ git+https://github.com/lucadellalib/speechbrain@50ffdc772c0d977390025ee7787735db9b92488c#egg=speechbrain
+stable_codec @ git+https://github.com/lucadellalib/stable-codec.git@main#egg=stable_codec
+wavtokenizer @ git+https://github.com/lucadellalib/WavTokenizer.git@main#egg=wavtokenizer

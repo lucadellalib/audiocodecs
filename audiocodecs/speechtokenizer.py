@@ -1,5 +1,17 @@
 # ==============================================================================
-# Copyright 2024 Luca Della Libera. All Rights Reserved.
+# Copyright 2025 Luca Della Libera.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # ==============================================================================
 
 """SpeechTokenizer (see https://arxiv.org/abs/2308.16692)."""
@@ -80,6 +92,13 @@ class SpeechTokenizer(Codec):
         return toks
 
     # override
+    def _sig_to_feats(self, sig, length):
+        # sig: [B, T]
+        feats = self.model.encoder(sig[:, None])
+        feats = feats.movedim(-1, -2)  # [B, N, K]
+        return feats
+
+    # override
     def _toks_to_sig(self, toks, length):
         # toks: [B, N, K]
         toks = toks.movedim(-1, -3)  # [K, B, N]
@@ -116,6 +135,9 @@ if __name__ == "__main__":
             print(output.shape)
             embs = codec.embs()
             print(embs.shape)
+            if mode in ["encode", "reconstruct"]:
+                output = codec.sig_to_feats(input)
+                print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")
     codec = SpeechTokenizer(sample_rate, num_codebooks=num_codebooks).eval()

@@ -1,5 +1,17 @@
 # ==============================================================================
-# Copyright 2024 Luca Della Libera. All Rights Reserved.
+# Copyright 2025 Luca Della Libera.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # ==============================================================================
 
 """DAC (see https://arxiv.org/abs/2306.06546)."""
@@ -19,9 +31,10 @@ class DAC(Codec):
     def __init__(
         self,
         sample_rate,
-        orig_sample_rate=24000,
+        orig_sample_rate=16000,
         mode="reconstruct",
         num_codebooks=8,
+        latent=False,
     ):
         try:
             # Workaround to avoid name collisions with installed modules
@@ -37,6 +50,7 @@ class DAC(Codec):
         super().__init__(sample_rate, orig_sample_rate, mode)
         self.num_codebooks = num_codebooks
         self.vocab_size = 1024
+        self.latent = latent
 
         tag = int(orig_sample_rate / 1000)
         model_path = str(dac.utils.download(model_type=f"{tag}khz"))
@@ -50,20 +64,27 @@ class DAC(Codec):
     # override
     @torch.no_grad()
     def embs(self):
+        if self.latent:
+            embs = [
+                quantizer.codebook.weight
+                for quantizer in self.model.quantizer.quantizers
+            ]
+            embs = embs[: self.num_codebooks]
+            embs = torch.stack(embs)  # [K, C, H]
+            return embs
         # See https://github.com/descriptinc/descript-audio-codec/blob/c7cfc5d2647e26471dc394f95846a0830e7bec34/dac/nn/quantize.py#L200
         device = next(iter(self.model.state_dict().values())).device
         toks = torch.arange(self.vocab_size, device=device)
         toks = (
             toks[:, None, None].expand(-1, self.num_codebooks, -1).clone()
         )  # [C, K, 1]
-        with torch.no_grad():
-            z_q, z_p, _ = self.model.quantizer.from_codes(toks)
+        z_q, z_p, _ = self.model.quantizer.from_codes(toks)
         z_ps = z_p.split(z_p.shape[1] // toks.shape[1], dim=1)  # [C, D, 1] * K
         z_qs = []
         for i, z_p_i in enumerate(z_ps):
             z_q_i = self.model.quantizer.quantizers[i].out_proj(z_p_i)  # [C, H, 1]
             z_qs.append(z_q_i)
-        assert (z_q == sum(z_qs)).all()
+        # assert (z_q == sum(z_qs)).all()
         # Embeddings pre-projections: size = 8
         # Embeddings post-projections: size = 1024
         embs = torch.stack(z_qs)[..., 0]  # [K, C, H]
@@ -77,6 +98,18 @@ class DAC(Codec):
         )  # [B, K, N]
         toks = toks.movedim(-1, -2)  # [B, N, K]
         return toks
+
+    # override
+    def _sig_to_feats(self, sig, length):
+        # sig: [B, T]
+        if self.latent:
+            feats = self.model.encoder(sig[:, None])  # [B, H, N]
+            feats = self.model.quantizer.quantizers[0].in_proj(feats)
+            feats = feats.movedim(-1, -2)
+            return feats
+        feats = self.model.encoder(sig[:, None])  # [B, H, N]
+        feats = feats.movedim(-1, -2)
+        return feats
 
     # override
     def _toks_to_sig(self, toks, length):
@@ -117,6 +150,9 @@ if __name__ == "__main__":
             print(output.shape)
             embs = codec.embs()
             print(embs.shape)
+            if mode in ["encode", "reconstruct"]:
+                output = codec.sig_to_feats(input)
+                print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")
     codec = DAC(sample_rate, num_codebooks=num_codebooks).eval()

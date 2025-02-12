@@ -1,4 +1,4 @@
-graft requirements
+include requirements.txt
 include audiocodecs/example.wav
 global-exclude __pycache__
 global-exclude *.py[co]

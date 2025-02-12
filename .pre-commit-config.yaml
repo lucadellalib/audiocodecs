@@ -1,53 +1,24 @@
 repos:
-  - repo: local
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.5.0
     hooks:
-      - id: isort
-        name: isort
-        language: system
-        entry: isort
-        types: [python]
-
-      - id: black
-        name: black
-        language: system
-        entry: black
-        types: [python]
-
       - id: trailing-whitespace
-        name: trailing-whitespace
-        language: system
-        entry: trailing-whitespace-fixer
-        types: [python]
-
+        types: [file, text]
       - id: end-of-file-fixer
-        name: end-of-file-fixer
-        language: system
-        entry: end-of-file-fixer
         types: [python]
-
       - id: mixed-line-ending
-        name: mixed-line-ending
-        language: system
-        entry: mixed-line-ending
         types: [python]
         args: ["--fix=lf"]
-
-      - id: fix-encoding-pragma
-        name: fix-encoding-pragma
-        language: system
-        entry: fix-encoding-pragma
-        types: [python]
-        args: ["--remove"]
-
-      - id: check-case-conflict
-        name: check-case-conflict
-        language: system
-        entry: check-case-conflict
+      - id: debug-statements
         types: [python]
 
-      - id: check-docstring-first
-        name: check-docstring-first
-        language: system
-        entry: check-docstring-first
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
         types: [python]
-        exclude: version.py
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort

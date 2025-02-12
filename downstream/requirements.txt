@@ -1,0 +1,15 @@
+ctranslate2>=4.0,<=4.4.0  # Required by faster-whisper
+faster-whisper
+librosa>=0.9.2
+numpy>=1.22.0
+onnxruntime>=1.16.3
+pesq
+ptflops
+torch
+torchaudio
+torchmetrics[audio]
+transformers>=4.45.1
+speechbrain @ git+https://github.com/lucadellalib/speechbrain@50ffdc772c0d977390025ee7787735db9b92488c#egg=speechbrain
+# Install local audiocodecs package in editable mode
+-e ../
+-e ../[all]

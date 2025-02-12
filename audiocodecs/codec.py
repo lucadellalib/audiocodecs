@@ -1,5 +1,17 @@
 # ==============================================================================
-# Copyright 2024 Luca Della Libera. All Rights Reserved.
+# Copyright 2025 Luca Della Libera.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # ==============================================================================
 
 """Codec interface."""
@@ -15,7 +27,7 @@ __all__ = ["Codec"]
 
 # B: batch size
 # T: sequence length in the time domain
-# N: sequeunce length in the token domain
+# N: sequence length in the token domain
 # C: vocabulary size (assuming that each codebook has the same number of tokens)
 # K: number of codebooks
 class Codec(torch.nn.Module, ABC):
@@ -28,6 +40,7 @@ class Codec(torch.nn.Module, ABC):
         self.sample_rate = sample_rate
         self.orig_sample_rate = orig_sample_rate
         self.mode = mode
+        self._dist = None
 
     def forward(self, input, length=None):
         if self.mode == "encode":
@@ -52,6 +65,17 @@ class Codec(torch.nn.Module, ABC):
             length = torch.ones(len(sig), device=sig.device)
         return self._sig_to_toks(sig, length)
 
+    def sig_to_feats(self, sig, length=None):
+        # sig: [B, T]
+        sig = torchaudio.functional.resample(
+            sig,
+            self.sample_rate,
+            self.orig_sample_rate,
+        )
+        if length is None:
+            length = torch.ones(len(sig), device=sig.device)
+        return self._sig_to_feats(sig, length)
+
     def toks_to_sig(self, toks, length=None):
         # toks: [B, N, K]
         if length is None:
@@ -70,6 +94,11 @@ class Codec(torch.nn.Module, ABC):
 
     @abstractmethod
     def _sig_to_toks(self, sig, length):
+        # sig: [B, T]
+        raise NotImplementedError
+
+    @abstractmethod
+    def _sig_to_feats(self, sig, length):
         # sig: [B, T]
         raise NotImplementedError
 

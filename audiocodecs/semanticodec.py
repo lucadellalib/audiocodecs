@@ -1,5 +1,17 @@
 # ==============================================================================
-# Copyright 2024 Luca Della Libera. All Rights Reserved.
+# Copyright 2025 Luca Della Libera.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # ==============================================================================
 
 """SemantiCodec (see https://arxiv.org/abs/2405.00233)."""
@@ -96,6 +108,12 @@ class SemantiCodec(Codec):
         return toks
 
     # override
+    def _sig_to_feats(self, sig, length):
+        # sig: [B, T]
+        feats = self._encode_unquantized(sig)  # [B, N, K]
+        return feats
+
+    # override
     def _toks_to_sig(self, toks, length):
         # toks: [B, N, K]
         sig = self._decode(toks)[:, 0]  # [B, T]
@@ -153,6 +171,48 @@ class SemantiCodec(Codec):
         tokens = tokens[:, : semanticodec.main.math.ceil(target_token_len), :]
         return tokens
 
+    def _encode_unquantized(self, waveform):
+        # Calculate the original duration
+        original_duration = waveform.shape[1] / semanticodec.main.SAMPLE_RATE
+        # This is to pad the audio to the multiplication of 0.16 seconds so that the original audio can be reconstructed
+        original_duration = original_duration + (
+            semanticodec.main.AUDIOMAE_PATCH_DURATION
+            - original_duration % semanticodec.main.AUDIOMAE_PATCH_DURATION
+        )
+        # Calculate the token length in theory
+        target_token_len = (
+            8
+            * original_duration
+            / semanticodec.main.AUDIOMAE_PATCH_DURATION
+            / self.model.stack_factor_K
+        )
+        segment_sample_length = int(
+            semanticodec.main.SAMPLE_RATE * semanticodec.main.SEGMENT_DURATION
+        )
+        # Pad audio to the multiplication of 10.24 seconds for easier segmentations
+
+        if waveform.shape[1] % segment_sample_length < segment_sample_length:
+            diff = int(
+                segment_sample_length - waveform.shape[1] % segment_sample_length
+            )
+            waveform = torch.nn.functional.pad(waveform, [0, diff])
+
+        mel_target_length = semanticodec.main.MEL_TARGET_LENGTH * int(
+            waveform.shape[1] / segment_sample_length
+        )
+        # Calculate the mel spectrogram
+        mels = [
+            semanticodec.main.extract_kaldi_fbank_feature(
+                x[None], semanticodec.main.SAMPLE_RATE, target_length=mel_target_length
+            )["ta_kaldi_fbank"]
+            for x in waveform
+        ]
+        mel = torch.stack(mels)
+        assert mel.shape[-1] == 128 and mel.shape[-2] % 1024 == 0
+        feats = self._encoder_forward(mel.to(waveform.device))
+        feats = feats[:, : semanticodec.main.math.ceil(target_token_len), :]
+        return feats
+
     def _decode(self, tokens):
         windowed_token_list = self.model.encoder.long_token_split_window(
             tokens,
@@ -192,6 +252,92 @@ class SemantiCodec(Codec):
             device=tokens.device,
         )
 
+    def _encoder_forward(self, batch):
+        # Perform padding before this function
+        # Trim the audio token after this function
+        assert batch.size(-1) == 128 and batch.size(-2) % 1024 == 0
+        if self.model.encoder.device is None:
+            self.model.encoder.device = batch.device
+            self.model.encoder.centroid_npy = self.model.encoder.centroid_npy.to(
+                self.model.encoder.device
+            )
+
+        window_length = 1024
+        current_start = 0
+        total_length_batch = batch.size(-2)
+
+        feats_list = []
+        while current_start + window_length <= total_length_batch:
+            current_batch = batch[:, current_start : current_start + window_length, :]
+            with torch.no_grad():
+                # [bs, 513, 768]
+                output = self._encoder_forward_inner(current_batch)
+                feats_list.append(output)
+            current_start += window_length
+        return torch.cat(feats_list, dim=1)
+
+    def _encoder_forward_inner(self, batch):
+        assert batch.size(-2) == 1024 and batch.size(-1) == 128
+
+        if self.model.encoder.device is None:
+            self.model.encoder.device = batch.device
+            self.model.encoder.centroid_npy = self.model.encoder.centroid_npy.to(
+                self.model.encoder.device
+            )
+
+        batch = batch.unsqueeze(1)
+
+        padding_cutoff_index = []
+        temporal_dim = batch.shape[-2]
+        for i in range(batch.shape[0]):
+            active_index = (
+                torch.std(batch[i, 0], dim=-1) <= 1e-7
+            )  # F F T T F F T T T T T
+            # If there are empty segment in the audio or there are padding in the audio
+            try:
+                if active_index.any():
+                    # Convert boolean tensor to integer tensor where False becomes 0
+                    int_tensor = active_index == False
+                    # Find indices where the tensor is False
+                    false_indices = torch.nonzero(int_tensor, as_tuple=False).squeeze()
+                    # Get the last index of False
+                    # last_false_index = false_indices[-1].item() if false_indices.numel() > 0 else -1
+                    if false_indices.numel() > 0:
+                        last_false_index = false_indices[-1].item()
+                    else:
+                        last_false_index = -1
+                    column_max = last_false_index + 1
+                # If there are no any empty segment in the audio
+                else:
+                    column_max = temporal_dim
+            except Exception as e:
+                import traceback
+
+                traceback.print_exc()
+                print(false_indices)
+                print(false_indices.numel())
+                column_max = 0
+
+            padding_cutoff_index.append(column_max / temporal_dim)
+
+        with torch.no_grad():
+            # [bs, 513, 768]
+            representation = self.model.encoder.audiomae(
+                batch,
+                no_mask=self.model.encoder.no_audiomae_mask,
+                no_average=self.model.encoder.no_audiomae_average,
+            )
+
+            if self.model.encoder.downsampling_rate != 1:
+                representation = self.model.encoder.concate(representation)
+                representation = (
+                    representation.permute(0, 3, 1, 2).flatten(2).permute(0, 2, 1)
+                )
+            else:
+                representation = representation[:, 1:, :]
+
+        return representation
+
 
 # Test
 if __name__ == "__main__":
@@ -213,6 +359,9 @@ if __name__ == "__main__":
             print(output.shape)
             embs = codec.embs()
             print(embs.shape)
+            if mode in ["encode", "reconstruct"]:
+                output = codec.sig_to_feats(input)
+                print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")
     codec = SemantiCodec(sample_rate).eval()

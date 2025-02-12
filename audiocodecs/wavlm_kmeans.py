@@ -1,5 +1,17 @@
 # ==============================================================================
-# Copyright 2024 Luca Della Libera. All Rights Reserved.
+# Copyright 2025 Luca Della Libera.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # ==============================================================================
 
 """WavLM + K-means (see https://arxiv.org/abs/2312.09747)."""
@@ -16,6 +28,13 @@ class WavLMKmeans(Codec):
     LAYER_IDS = [(6,), (1, 3, 6)]
 
     def __init__(self, sample_rate, mode="reconstruct", layer_ids=(6,)):
+        try:
+            import speechbrain
+        except ImportError:
+            raise ImportError(
+                "`pip install git+https://github.com/lucadellalib/speechbrain@50ffdc772c0d977390025ee7787735db9b92488c#egg=speechbrain` to use this module"
+            )
+
         super().__init__(sample_rate, 16000, mode)
         self.layer_ids = layer_ids
         self.vocab_size = 512
@@ -49,6 +68,12 @@ class WavLMKmeans(Codec):
         return toks
 
     # override
+    def _sig_to_feats(self, sig, length):
+        # sig: [B, T]
+        feats = self.model.sig_to_feats(sig).mean(dim=-1)  # [B, N, H, K]
+        return feats
+
+    # override
     def _toks_to_sig(self, toks, length):
         # toks: [B, N, K]
         qfeats = self.model.toks_to_qfeats(toks)
@@ -80,6 +105,9 @@ if __name__ == "__main__":
             print(output.shape)
             embs = codec.embs()
             print(embs.shape)
+            if mode in ["encode", "reconstruct"]:
+                output = codec.sig_to_feats(input)
+                print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")
     codec = WavLMKmeans(sample_rate, layer_ids=layer_ids).eval()
