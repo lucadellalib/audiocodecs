@@ -1,5 +1,8 @@
 # 🎵 Audio Codecs
 
+![License](https://img.shields.io/github/license/lucadellalib/audiocodecs)
+![Stars](https://img.shields.io/github/stars/lucadellalib/audiocodecs?style=social)
+
 A collection of audio codecs with a **standardized API** for easy integration and benchmarking.
 
 ---------------------------------------------------------------------------------------------------------
