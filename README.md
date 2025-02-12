@@ -76,6 +76,49 @@ Reference implementations of downstream tasks using these audio codecs can be fo
 
 ---------------------------------------------------------------------------------------------------------
 
+## @ Citing
+
+```
+@article{dellalibera2025focalcodec,
+    title   = {{FocalCodec}: Low-Bitrate Speech Coding via Focal Modulation Networks},
+    author  = {Luca {Della Libera} and Francesco Paissan and Cem Subakan and Mirco Ravanelli},
+    journal = {arXiv preprint arXiv:2502.04465},
+    year    = {2025},
+}
+```
+
+```
+@article{speechbrainV1,
+    title   = {Open-Source Conversational {AI} with {SpeechBrain} 1.0},
+    author  = {Mirco Ravanelli and Titouan Parcollet and Adel Moumen and Sylvain de Langen and Cem Subakan
+               and Peter Plantinga and Yingzhi Wang and Pooneh Mousavi and Luca {Della Libera} and Artem Ploujnikov
+               and Francesco Paissan and Davide Borra and Salah Zaiem and Zeyu Zhao and Shucong Zhang
+               and Georgios Karakasidis and Sung-Lin Yeh and Pierre Champion and Aku Rouhe and Rudolf Braun
+               and Florian Mai and Juan Zuluaga-Gomez and Seyed Mahed Mousavi and Andreas Nautsch and Ha Nguyen
+               and Xuechen Liu and Sangeet Sagar and Jarod Duret and Salima Mdhaffar and Ga{{\"e}}lle Laperri{{\`e}}re
+               and Mickael Rouvier and Renato De Mori and Yannick Est{{\`e}}ve},
+    journal = {Journal of Machine Learning Research (JMLR)},
+    year    = {2024},
+    volume  = {25},
+    number  = {333},
+    pages   = {1--11},
+}
+```
+
+```
+@article{ravanelli2021speechbrain,
+    title   = {{SpeechBrain}: A General-Purpose Speech Toolkit},
+    author  = {Mirco Ravanelli and Titouan Parcollet and Peter Plantinga and Aku Rouhe and Samuele Cornell
+               and Loren Lugosch and Cem Subakan and Nauman Dawalatabad and Abdelwahab Heba and Jianyuan Zhong
+               and Ju-Chieh Chou and Sung-Lin Yeh and Szu-Wei Fu and Chien-Feng Liao and Elena Rastorgueva
+               and François Grondin and William Aris and Hwidong Na and Yan Gao and Renato De Mori and Yoshua Bengio},
+    journal = {arXiv preprint arXiv:2106.04624},
+    year    = {2021},
+}
+```
+
+---------------------------------------------------------------------------------------------------------
+
 ## 📧 Contact
 
 [luca.dellalib@gmail.com](mailto:luca.dellalib@gmail.com)
