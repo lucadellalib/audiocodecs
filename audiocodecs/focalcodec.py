@@ -14,7 +14,7 @@
 # limitations under the License.
 # ==============================================================================
 
-"""FocalCodec."""
+"""FocalCodec (see https://arxiv.org/abs/2502.04465)."""
 
 import torch
 
