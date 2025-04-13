@@ -13,10 +13,13 @@ __set_seed: !apply:torch.manual_seed [!ref <seed>]
 
 # Data preparation
 data_folder: !PLACEHOLDER
-train_csv: [!ref <save_folder>/train-clean-100.csv, !ref <save_folder>/train-clean-360.csv]
+train_csv:
+    - !ref <save_folder>/train-clean-100.csv
+    - !ref <save_folder>/train-clean-360.csv
+    - !ref <save_folder>/train-other-500.csv
 valid_csv: !ref <save_folder>/dev-clean.csv
 test_csv: !ref <save_folder>/test-clean.csv
-splits: [train-clean-100, train-clean-360, dev-clean, test-clean]
+splits: [train-clean-100, train-clean-360, train-other-500, dev-clean, test-clean]
 
 # Output folders
 output_folder: !ref results/<task>/<dataset>/<experiment_name>/<seed>
@@ -35,8 +38,8 @@ train_remove_if_shorter: 0.0  # Seconds
 valid_remove_if_shorter: 0.0  # Seconds
 test_remove_if_shorter: 0.0  # Seconds
 sorting: ascending
-tok_cache_size: 5.e+9
-spk_cache_size: 5.e+9
+tok_cache_size: 1.e+10
+spk_cache_size: 1.e+10
 
 # Training parameters
 num_epochs: 100
@@ -182,6 +185,12 @@ stoi_computer: !name:metrics.stoi.STOI
     sample_rate: !ref <sample_rate>
 
 pesq_computer: !name:metrics.pesq.PESQ
+    sample_rate: !ref <sample_rate>
+
+meld_computer: !name:metrics.mel_distance.MelDistance
+    sample_rate: !ref <sample_rate>
+
+stftd_computer: !name:metrics.stft_distance.STFTDistance
     sample_rate: !ref <sample_rate>
 
 dwer_computer: !name:metrics.dwer.DWER

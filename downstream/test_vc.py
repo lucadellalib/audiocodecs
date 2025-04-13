@@ -236,6 +236,12 @@ class VoiceConversion(sb.Brain):
             self.pesq_metric.append(IDs, hyp_sig, out_sig, lens)
             self.rec_pesq_metric.append(IDs, rec_sig, out_sig, lens)
 
+            self.meld_metric.append(IDs, hyp_sig, out_sig, lens)
+            self.rec_meld_metric.append(IDs, rec_sig, out_sig, lens)
+
+            self.stftd_metric.append(IDs, hyp_sig, out_sig, lens)
+            self.rec_stftd_metric.append(IDs, rec_sig, out_sig, lens)
+
             self.dwer_metric.append(IDs, hyp_sig, out_sig, lens)
             self.rec_dwer_metric.append(IDs, rec_sig, out_sig, lens)
 
@@ -310,6 +316,12 @@ class VoiceConversion(sb.Brain):
             self.pesq_metric = self.hparams.pesq_computer()
             self.rec_pesq_metric = self.hparams.pesq_computer()
 
+            self.meld_metric = self.hparams.meld_computer()
+            self.rec_meld_metric = self.hparams.meld_computer()
+
+            self.stftd_metric = self.hparams.stftd_computer()
+            self.rec_stftd_metric = self.hparams.stftd_computer()
+
             self.dwer_metric = self.hparams.dwer_computer()
             self.rec_dwer_metric = self.hparams.dwer_computer(
                 model=self.dwer_metric.model
@@ -345,6 +357,12 @@ class VoiceConversion(sb.Brain):
 
             stage_stats["PESQ"] = self.pesq_metric.summarize("average")
             stage_stats["RecPESQ"] = self.rec_pesq_metric.summarize("average")
+
+            stage_stats["MelD"] = self.meld_metric.summarize("average")
+            stage_stats["RecMelD"] = self.rec_meld_metric.summarize("average")
+
+            stage_stats["STFTD"] = self.stftd_metric.summarize("average")
+            stage_stats["RecSTFTD"] = self.rec_stftd_metric.summarize("average")
 
             stage_stats["dWER"] = self.dwer_metric.summarize("error_rate")
             stage_stats["dCER"] = self.dwer_metric.summarize("error_rate_char")

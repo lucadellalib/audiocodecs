@@ -55,7 +55,16 @@ class MultiHeadEmbedding(torch.nn.Embedding):
         output = input + offsets
         if self.padding_idx is not None:
             output[input == self.vocab_size] = self.padding_idx
-        output = super().forward(output)
+        # JIT compilable
+        output = torch.nn.functional.embedding(
+            output,
+            self.weight,
+            self.padding_idx,
+            self.max_norm,
+            self.norm_type,
+            self.scale_grad_by_freq,
+            self.sparse,
+        )
         return output
 
 

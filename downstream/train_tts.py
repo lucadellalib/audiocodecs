@@ -80,16 +80,12 @@ class TextToSpeech(sb.Brain):
         in_embs = torch.cat([spk_embs[:, None], in_embs], dim=1)
 
         # Ensure length is a multiple of num_codebooks to keep the correct codebook flattening pattern
-        in_embs = torch.nn.functional.pad(
-            in_embs,
-            [
-                0,
-                0,
-                0,
-                self.hparams.num_codebooks
-                - in_embs.shape[-2] % self.hparams.num_codebooks,
-            ],
-        )
+        rem_length = in_embs.shape[-2] % self.hparams.num_codebooks
+        if rem_length > 0:
+            in_embs = torch.nn.functional.pad(
+                in_embs,
+                [0, 0, 0, self.hparams.num_codebooks - rem_length],
+            )
 
         # Prepare BOS tokens (flatten tokens along time dimension)
         out_toks_bos = torch.nn.functional.pad(
@@ -195,6 +191,12 @@ class TextToSpeech(sb.Brain):
             self.pesq_metric.append(IDs, hyp_sig, out_sig, lens)
             self.rec_pesq_metric.append(IDs, rec_sig, out_sig, lens)
 
+            self.meld_metric.append(IDs, hyp_sig, out_sig, lens)
+            self.rec_meld_metric.append(IDs, rec_sig, out_sig, lens)
+
+            self.stftd_metric.append(IDs, hyp_sig, out_sig, lens)
+            self.rec_stftd_metric.append(IDs, rec_sig, out_sig, lens)
+
             self.dwer_metric.append(IDs, hyp_sig, out_sig, lens)
             self.rec_dwer_metric.append(IDs, rec_sig, out_sig, lens)
 
@@ -255,6 +257,12 @@ class TextToSpeech(sb.Brain):
 
             self.pesq_metric = self.hparams.pesq_computer()
             self.rec_pesq_metric = self.hparams.pesq_computer()
+
+            self.meld_metric = self.hparams.meld_computer()
+            self.rec_meld_metric = self.hparams.meld_computer()
+
+            self.stftd_metric = self.hparams.stftd_computer()
+            self.rec_stftd_metric = self.hparams.stftd_computer()
 
             self.dwer_metric = self.hparams.dwer_computer()
             self.rec_dwer_metric = self.hparams.dwer_computer(
@@ -323,6 +331,12 @@ class TextToSpeech(sb.Brain):
 
                 stage_stats["PESQ"] = self.pesq_metric.summarize("average")
                 stage_stats["RecPESQ"] = self.rec_pesq_metric.summarize("average")
+
+                stage_stats["MelD"] = self.meld_metric.summarize("average")
+                stage_stats["RecMelD"] = self.rec_meld_metric.summarize("average")
+
+                stage_stats["STFTD"] = self.stftd_metric.summarize("average")
+                stage_stats["RecSTFTD"] = self.rec_stftd_metric.summarize("average")
 
                 stage_stats["dWER"] = self.dwer_metric.summarize("error_rate")
                 stage_stats["dCER"] = self.dwer_metric.summarize("error_rate_char")

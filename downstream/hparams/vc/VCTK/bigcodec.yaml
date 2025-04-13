@@ -67,6 +67,12 @@ stoi_computer: !name:metrics.stoi.STOI
 pesq_computer: !name:metrics.pesq.PESQ
     sample_rate: !ref <sample_rate>
 
+meld_computer: !name:metrics.mel_distance.MelDistance
+    sample_rate: !ref <sample_rate>
+
+stftd_computer: !name:metrics.stft_distance.STFTDistance
+    sample_rate: !ref <sample_rate>
+
 dwer_computer: !name:metrics.dwer.DWER
     model_hub: !ref <dwer_hub>
     sample_rate: !ref <sample_rate>

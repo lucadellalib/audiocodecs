@@ -39,7 +39,7 @@ class WavTokenizer(Codec):
     ]
     CHECKPOINTS = [
         "wavtokenizer_large_unify_600_24k.ckpt",
-        "wavtokenizer_large_speech_320_24k.ckpt",
+        "wavtokenizer_large_speech_320_v2.ckpt",
     ]
 
     def __init__(

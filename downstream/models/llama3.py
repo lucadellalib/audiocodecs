@@ -56,10 +56,6 @@ class RMSNorm(nn.Module):
         self.weight = nn.Parameter(torch.empty(dim))
         self.reset_parameters()
 
-    def jit(self, **kwargs: "Any") -> "nn.Module":
-        module = torch.jit.script(self, **kwargs)
-        return module
-
     def reset_parameters(self) -> "None":
         nn.init.ones_(self.weight)
 
@@ -106,10 +102,6 @@ class FeedForward(nn.Module):
         self.w3 = nn.Linear(dim, ffn_dim, bias=False)
         self.act = nn.SiLU()
         self.dropout = nn.Dropout(dropout)
-
-    def jit(self, **kwargs: "Any") -> "nn.Module":
-        module = torch.jit.script(self, **kwargs)
-        return module
 
     def forward(self, input: "Tensor"):
         # input: [B, T, H]
@@ -160,10 +152,6 @@ class GroupedQueryAttention(nn.Module):
         self.wk = nn.Linear(dim, n_kv_heads * self.head_dim, bias=False)
         self.wv = nn.Linear(dim, n_kv_heads * self.head_dim, bias=False)
         self.wo = nn.Linear(n_heads * self.head_dim, dim, bias=False)
-
-    def jit(self, **kwargs: "Any") -> "nn.Module":
-        module = torch.jit.script(self, **kwargs)
-        return module
 
     def forward(
         self,
@@ -336,10 +324,6 @@ class LlamaLayer(nn.Module):
         self.feed_forward = FeedForward(dim, ffn_dim, dropout)
         self.ffn_norm = RMSNorm(dim, norm_eps)
 
-    def jit(self, **kwargs: "Any") -> "nn.Module":
-        module = torch.jit.script(self, **kwargs)
-        return module
-
     def forward(
         self,
         input: "Tensor",
@@ -490,10 +474,6 @@ class LlamaEncoder(nn.Module):
             ),
             persistent=False,
         )
-
-    def jit(self, **kwargs: "Any") -> "nn.Module":
-        module = torch.jit.script(self, **kwargs)
-        return module
 
     @torch.jit.export
     def embed(
@@ -788,9 +768,6 @@ class LlamaDecoder(LlamaEncoder):
                     mask_ = torch.hstack(
                         [torch.zeros((T, curr_pos), device=device), mask_]
                     ).type_as(input)
-
-                # Add batch and head dimension
-                mask_ = mask_[:, :]
             else:
                 mask_ = None
         else:
@@ -1011,7 +988,7 @@ def test_encoder():
     # Process 50 timesteps
     input = torch.randint(0, K, size=(B, 50), device=device)
     output, state = model(model.embed(input))
-    model = model.jit()
+    model = torch.jit.script(model)
     output_jit, state_jit = model(model.embed(input))
     assert torch.allclose(output, output_jit, atol=1e-6), (
         output.sum(),
@@ -1049,7 +1026,7 @@ def test_decoder():
     # Process 50 timesteps
     input = torch.randn(B, 50, H, device=device)
     output, state = model(input)
-    output_jit, state_jit = model.jit()(input)
+    output_jit, state_jit = torch.jit.script(model)(input)
     assert torch.allclose(output, output_jit, atol=1e-6), (
         output.sum(),
         output_jit.sum(),
@@ -1066,7 +1043,7 @@ def test_decoder():
     # Process 2 additional timesteps
     input = torch.randn(B, 2, H, device=device)
     output, state_ = model(input, state=state)
-    output_jit, state_jit = model.jit()(input, state=state)
+    output_jit, state_jit = torch.jit.script(model)(input, state=state)
     state = state_
     assert torch.allclose(output, output_jit, atol=1e-6), (
         output.sum(),
@@ -1080,7 +1057,7 @@ def test_decoder():
     # Reset and process 2 timesteps
     input = torch.randn(B, 2, H, device=device)
     output, state = model(input)
-    output_jit, state_jit = model.jit()(input)
+    output_jit, state_jit = torch.jit.script(model)(input)
     assert torch.allclose(output, output_jit, atol=1e-6), (
         output.sum(),
         output_jit.sum(),
@@ -1093,7 +1070,7 @@ def test_decoder():
     # Non-causal mask
     input = torch.randn(B, 2, H, device=device)
     output, state = model(input, mask=None)
-    output_jit, state_jit = model.jit()(input, mask=None)
+    output_jit, state_jit = torch.jit.script(model)(input, mask=None)
     assert torch.allclose(output, output_jit, atol=1e-6), (
         output.sum(),
         output_jit.sum(),
@@ -1149,7 +1126,7 @@ def test_generation():
         top_p=0.0,
         use_kv_cache=False,
     )
-    output_jit = model.jit().generate(
+    output_jit = torch.jit.script(model).generate(
         bos_toks,
         eos_id,
         prompt_embs=prompt_embs,
@@ -1167,7 +1144,7 @@ def test_generation():
         top_p=0.0,
         use_kv_cache=True,
     )
-    output_jit = model.jit().generate(
+    output_jit = torch.jit.script(model).generate(
         bos_toks,
         eos_id,
         prompt_embs=prompt_embs,
@@ -1209,7 +1186,7 @@ def test_generation():
         print(time.time() - ts)
     print("-----------")
     print("With JIT")
-    model_jit = model.jit()
+    model_jit = torch.jit.script(model)
     for i in range(4):
         print(f"Iteration {i}")
         ts = time.time()

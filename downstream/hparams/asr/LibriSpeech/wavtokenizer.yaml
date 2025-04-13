@@ -31,7 +31,7 @@ train_remove_if_shorter: 0.0  # Seconds
 valid_remove_if_shorter: 0.0  # Seconds
 test_remove_if_shorter: 0.0  # Seconds
 sorting: ascending
-cache_size: 5.e+9
+cache_size: 1.e+10
 
 # Training parameters
 num_epochs: 100

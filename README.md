@@ -26,19 +26,18 @@ A collection of audio codecs with a **standardized API** for easy integration an
 ## 🛠️️ Installation
 
 First of all, install [Python 3.8 or later](https://www.python.org).
-Then, clone or download and extract the repository and navigate to `<path-to-repository>`.
 
-To install the package locally in editable mode, **without codecs (which must be installed separately)**,
-open a terminal and run:
+To install the package **with all available codecs**, open a terminal and run:
 
 ```bash
-pip install -e .
+pip install audiocodecs@git+https://github.com/lucadellalib/audiocodecs.git@main#egg=audiocodecs[all]
 ```
 
-To install **all available codecs**, run:
+If you encounter issues (e.g. codec installation conflicts with certain PyTorch versions or platforms),
+you can install the package **without codecs**, and install the codec manually as needed:
 
 ```bash
-pip install -e .[all]
+pip install audiocodecs@git+https://github.com/lucadellalib/audiocodecs.git@main#egg=audiocodecs
 ```
 
 ---------------------------------------------------------------------------------------------------------
