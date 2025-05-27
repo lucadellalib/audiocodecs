@@ -37,7 +37,7 @@ class FocalCodec(Codec):
         num_codebooks=1,
         vocab_size=8192,
         mode="reconstruct",
-        config="lucadellalib/focalcodec/LibriTTS960_50Hz",
+        config="lucadellalib/focalcodec_50hz",
     ):
         try:
             import safetensors
