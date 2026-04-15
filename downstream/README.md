@@ -189,7 +189,7 @@ To run an experiment, navigate to `<path-to-repository>/downstream`, open a term
 
 ```bash
 python {train,test}_<task>.py \
-hparams/<task>/<config>.yaml hparams/<codec>/<config>.yaml hparams/<dataset>/<config>.yaml \
+hparams/tasks/<config>.yaml hparams/codecs/<config>.yaml hparams/datasets/<config>.yaml \
 --data_folder <path-to-data-folder>
 ```
 
