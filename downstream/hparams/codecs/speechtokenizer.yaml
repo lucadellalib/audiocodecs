@@ -1,0 +1,17 @@
+# ###########################################################################################
+# Codec: SpeechTokenizer
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: speechtokenizer
+
+# Codec parameters
+num_codebooks: 2
+vocab_size: 1024
+embedding_dim: 1024
+
+# Codec
+codec: !new:audiocodecs.SpeechTokenizer
+    sample_rate: !ref <sample_rate>
+    num_codebooks: !ref <num_codebooks>
+    mode: !ref <mode>

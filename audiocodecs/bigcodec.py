@@ -95,20 +95,34 @@ class BigCodec(Codec):
     # override
     def _sig_to_feats(self, sig, length):
         # sig: [B, T]
-        if self.latent:
-            feats = self.encoder(sig[:, None])  # [B, H, N]
-            feats = feats.movedim(-1, -2)
-            feats = self.quantizer.layers[0].in_proj(feats)
-            return feats
         feats = self.encoder(sig[:, None])  # [B, H, N]
         feats = feats.movedim(-1, -2)
         return feats
+
+    # override
+    def _sig_to_qfeats(self, sig, length):
+        # sig: [B, T]
+        feats = self.encoder(sig[:, None])
+        qfeats, _, _ = self.quantizer(feats)
+        qfeats = qfeats.movedim(-1, -2)
+        return qfeats
 
     # override
     def _toks_to_sig(self, toks, length):
         # toks: [B, N, K=1]
         qfeats = self.quantizer.vq2emb(toks)
         sig = self.decoder(qfeats.movedim(-1, -2), vq=False)[:, 0]  # [B, T]
+        return sig
+
+    # override
+    def _toks_to_qfeats(self, toks, length):
+        # toks: [B, N, K=1]
+        qfeats = self.quantizer.vq2emb(toks)
+        return qfeats
+
+    # override
+    def _feats_to_sig(self, feats, length):
+        sig = self.decoder(feats.movedim(-1, -2), vq=False)[:, 0]  # [B, T]
         return sig
 
 
@@ -134,6 +148,8 @@ if __name__ == "__main__":
             print(embs.shape)
             if mode in ["encode", "reconstruct"]:
                 output = codec.sig_to_feats(input)
+                print(output.shape)
+                output = codec.sig_to_qfeats(input)
                 print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")

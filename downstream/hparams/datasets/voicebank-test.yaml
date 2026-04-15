@@ -1,0 +1,12 @@
+# ###########################################################################################
+# Dataset: VoiceBank test
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+dataset: VoiceBank
+
+# Data preparation
+sample_rate: 16000
+data_folder: !PLACEHOLDER
+test_csv: !ref <save_folder>/testset_wav.csv
+splits: [testset_wav]

@@ -1,0 +1,14 @@
+# ###########################################################################################
+# Dataset: Speech Commands
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+dataset: SpeechCommands
+
+# Data preparation
+sample_rate: 16000
+data_folder: !PLACEHOLDER
+train_csv: [!ref <save_folder>/training.csv]
+valid_csv: !ref <save_folder>/validation.csv
+test_csv: !ref <save_folder>/testing.csv
+splits: [training, validation, testing]

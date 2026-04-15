@@ -1,0 +1,46 @@
+# ###########################################################################################
+# Codec: DyCAST
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: dycast
+
+# Codec parameters
+num_codebooks: 32
+vocab_size: 4
+embedding_dim: 32
+
+config: lucadellalib/dycast
+boundary_source: boundary_decode
+duration_source: duration_decode
+budget_decode: False
+use_retriever: False
+sim_threshold: 0.97
+blend: 1.0
+max_silence_s: null
+threshold: 0.5
+min_gap: 1
+max_gap: null
+temperature: 1.0  # Unused
+use_wavenext_checkpoint: False
+
+# Codec
+codec: !new:audiocodecs.DyCAST
+    sample_rate: !ref <sample_rate>
+    num_codebooks: !ref <num_codebooks>
+    vocab_size: !ref <vocab_size>
+    config: !ref <config>
+    boundary_source: !ref <boundary_source>
+    duration_source: !ref <duration_source>
+    budget_decode: !ref <budget_decode>
+    use_retriever: !ref <use_retriever>
+    sim_threshold: !ref <sim_threshold>
+    blend: !ref <blend>
+    aligner_kwargs:
+      max_silence_s: !ref <max_silence_s>
+    boundary_predictor_kwargs:
+      threshold: !ref <threshold>
+      min_gap: !ref <min_gap>
+      max_gap: !ref <max_gap>
+    use_wavenext_checkpoint: !ref <use_wavenext_checkpoint>
+    mode: !ref <mode>

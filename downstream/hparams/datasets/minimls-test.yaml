@@ -1,0 +1,13 @@
+# ###########################################################################################
+# Dataset: MiniMLS test
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+dataset: MLS
+
+# Data preparation
+sample_rate: 16000
+data_folder: !PLACEHOLDER
+test_csv: !ref <save_folder>/test.csv
+splits: [test]
+languages: null

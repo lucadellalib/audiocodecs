@@ -1,0 +1,22 @@
+# ###########################################################################################
+# Codec: WavTokenizer
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: wavtokenizer
+
+# Codec parameters
+num_codebooks: 1
+vocab_size: 4096
+embedding_dim: 512
+source: novateur/WavTokenizer-large-unify-40token
+config: wavtokenizer_smalldata_frame40_3s_nq1_code4096_dim512_kmeans200_attn.yaml
+checkpoint: wavtokenizer_large_unify_600_24k.ckpt
+
+# Codec
+codec: !new:audiocodecs.WavTokenizer
+    sample_rate: !ref <sample_rate>
+    source: !ref <source>
+    config: !ref <config>
+    checkpoint: !ref <checkpoint>
+    mode: !ref <mode>

@@ -111,19 +111,6 @@ class Mimi(Codec):
     # override
     def _sig_to_feats(self, sig, length):
         # sig: [B, T]
-        if self.latent:
-            input_values = sig[:, None]
-            embeddings = self.model.encoder(input_values)
-            encoder_outputs = self.model.encoder_transformer(embeddings.transpose(1, 2))
-            embeddings = encoder_outputs[0].transpose(1, 2)
-            embeddings = self.model.downsample(embeddings)
-            embeddings = (
-                self.model.quantizer.semantic_residual_vector_quantizer.input_proj(
-                    embeddings
-                )
-            )
-            feats = embeddings.movedim(-1, -2)
-            return feats
         input_values = sig[:, None]
         embeddings = self.model.encoder(input_values)
         encoder_outputs = self.model.encoder_transformer(embeddings.transpose(1, 2))
@@ -133,11 +120,39 @@ class Mimi(Codec):
         return feats
 
     # override
+    def _sig_to_qfeats(self, sig, length):
+        # sig: [B, T]
+        # sig: [B, T]
+        abs_lens = sig.shape[-1] * length
+        max_len = abs_lens.max().long().item()
+        padding_mask = (
+            torch.arange(
+                max_len,
+                device=length.device,
+                dtype=length.dtype,
+            )[None]
+            < abs_lens[:, None]
+        )
+        output = self.model.encode(
+            sig[:, None], padding_mask[:, None], num_quantizers=self.num_codebooks
+        )
+        qfeats = self.model.quantizer.decode(output.audio_codes)
+        qfeats = qfeats.movedim(-1, -2)
+        return qfeats
+
+    # override
     def _toks_to_sig(self, toks, length):
         # toks: [B, N, K]
         output = self.model.decode(toks.movedim(-1, -2))
         sig = output.audio_values[:, 0]  # [B, T]
         return sig
+
+    # override
+    def _toks_to_qfeats(self, toks, length):
+        # toks: [B, N, K]
+        qfeats = self.model.quantizer.decode(toks.movedim(-1, -2))
+        qfeats = qfeats.movedim(-1, -2)
+        return qfeats
 
 
 # Test
@@ -165,6 +180,8 @@ if __name__ == "__main__":
             print(embs.shape)
             if mode in ["encode", "reconstruct"]:
                 output = codec.sig_to_feats(input)
+                print(output.shape)
+                output = codec.sig_to_qfeats(input)
                 print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")

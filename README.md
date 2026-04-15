@@ -9,17 +9,26 @@ A collection of audio codecs with a **standardized API** for easy integration an
 
 ## 🚀 Available Codecs
 
+- [AudioDec](https://arxiv.org/abs/2305.16608)
+- [BiCodec](https://arxiv.org/abs/2503.01710)
 - [BigCodec](https://arxiv.org/abs/2409.05377)
 - [DAC](https://arxiv.org/abs/2306.06546)
+- [DyCAST](https://arxiv.org/abs/2601.23174)
 - [EnCodec](https://arxiv.org/abs/2210.13438)
 - [EnCodec](https://arxiv.org/abs/2210.13438) + [Vocos](https://arxiv.org/abs/2306.00814)
 - [FocalCodec](https://arxiv.org/abs/2502.04465)
+- [FocalCodec-Stream](https://arxiv.org/abs/2509.16195)
+- [HILCodec](https://arxiv.org/abs/2405.04752)
+- [MagiCodec](https://arxiv.org/abs/2506.00385)
 - [Mimi](https://kyutai.org/Moshi.pdf)
+- [NanoCodec](https://arxiv.org/abs/2508.05835)
+- [PAST](https://arxiv.org/abs/2505.14470)
 - [SemantiCodec](https://arxiv.org/abs/2405.00233)
 - [SpeechTokenizer](https://arxiv.org/abs/2308.16692)
 - [Stable Codec](https://arxiv.org/abs/2411.19842)
-- [WavLM k-means](https://arxiv.org/abs/2312.09747)
+- [WavLM + K-means](https://arxiv.org/abs/2312.09747)
 - [WavTokenizer](https://arxiv.org/abs/2408.16532)
+- [X-Codec 2.0](https://arxiv.org/abs/2502.04128)
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -39,6 +48,9 @@ you can install the package **without codecs**, and install the codec manually a
 ```bash
 pip install audiocodecs@git+https://github.com/lucadellalib/audiocodecs.git@main#egg=audiocodecs
 ```
+
+**NOTE**: the initial **v0.0.1** release is still available at https://github.com/lucadellalib/audiocodecs/tree/v0.0.1.
+It can be installed with `pip install audiocodecs@git+https://github.com/lucadellalib/audiocodecs.git@v0.0.1#egg=audiocodecs`.
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -78,11 +90,29 @@ Reference implementations of downstream tasks using these audio codecs can be fo
 ## @ Citing
 
 ```
-@article{dellalibera2025focalcodec,
-    title   = {{FocalCodec}: Low-Bitrate Speech Coding via Focal Modulation Networks},
-    author  = {Luca {Della Libera} and Francesco Paissan and Cem Subakan and Mirco Ravanelli},
-    journal = {arXiv preprint arXiv:2502.04465},
-    year    = {2025},
+@inproceedings{dellalibera2025focalcodec,
+    title     = {{FocalCodec}: Low-Bitrate Speech Coding via Focal Modulation Networks},
+    author    = {Luca {Della Libera} and Francesco Paissan and Cem Subakan and Mirco Ravanelli},
+    booktitle = {Advances in Neural Information Processing Systems},
+    year      = {2025},
+}
+```
+
+```
+@inproceedings{dellalibera2026focalcodecstream,
+    title     = {{FocalCodec-Stream}: Streaming Low-Bitrate Speech Coding via Causal Distillation},
+    author    = {Luca {Della Libera} and Cem Subakan and Mirco Ravanelli},
+    booktitle = {IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+    year      = {2026},
+}
+```
+
+```
+@article{dellalibera2026dycast,
+    title   = {Beyond Fixed Frames: Dynamic Character-Aligned Speech Tokenization},
+    author  = {Luca {Della Libera} and Cem Subakan and Mirco Ravanelli},
+    journal = {arXiv preprint arXiv:2601.23174},
+    year    = {2026},
 }
 ```
 

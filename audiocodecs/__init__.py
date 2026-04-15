@@ -14,15 +14,23 @@
 # limitations under the License.
 # ==============================================================================
 
+from audiocodecs.audiodec import AudioDec
+from audiocodecs.bicodec import BiCodec
 from audiocodecs.bigcodec import BigCodec
 from audiocodecs.codec import Codec
 from audiocodecs.dac import DAC
+from audiocodecs.dycast import DyCAST
 from audiocodecs.encodec import Encodec
 from audiocodecs.focalcodec import FocalCodec
+from audiocodecs.hilcodec import HILCodec
+from audiocodecs.magicodec import MagiCodec
 from audiocodecs.mimi import Mimi
+from audiocodecs.nanocodec import NanoCodec
+from audiocodecs.past import PAST
 from audiocodecs.semanticodec import SemantiCodec
 from audiocodecs.speechtokenizer import SpeechTokenizer
 from audiocodecs.stablecodec import StableCodec
 from audiocodecs.version import VERSION as __version__
 from audiocodecs.wavlm_kmeans import WavLMKmeans
 from audiocodecs.wavtokenizer import WavTokenizer
+from audiocodecs.xcodec2 import XCodec2

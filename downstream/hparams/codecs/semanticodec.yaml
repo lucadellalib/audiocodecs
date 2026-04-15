@@ -1,0 +1,22 @@
+# ###########################################################################################
+# Codec: SemantiCodec
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: semanticodec
+
+# Codec parameters
+num_codebooks: 2
+vocab_size: 8192
+embedding_dim: 1536
+token_rate: 50
+acoustic_vocab_size: 8192
+ddim_sample_step: 50
+
+# Codec
+codec: !new:audiocodecs.SemantiCodec
+    sample_rate: !ref <sample_rate>
+    token_rate: !ref <token_rate>
+    semantic_vocab_size: !ref <vocab_size>
+    ddim_sample_step: !ref <ddim_sample_step>
+    mode: !ref <mode>

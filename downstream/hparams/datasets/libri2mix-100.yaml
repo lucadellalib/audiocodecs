@@ -1,0 +1,17 @@
+# ###########################################################################################
+# Dataset: Libri2Mix-100
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+dataset: LibriMix
+
+# Data preparation
+sample_rate: 16000
+data_folder: !PLACEHOLDER
+train_csv: !ref <save_folder>/train-100.csv
+valid_csv: !ref <save_folder>/dev.csv
+test_csv: !ref <save_folder>/test.csv
+splits: [train-100, dev, test]
+num_speakers: 2
+add_noise: False
+version: wav16k/min

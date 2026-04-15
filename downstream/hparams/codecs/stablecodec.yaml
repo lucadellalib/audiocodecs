@@ -1,0 +1,18 @@
+# ###########################################################################################
+# Codec: Stable Codec
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: stablecodec
+
+# Codec parameters
+num_codebooks: 2
+vocab_size: 15625
+embedding_dim: 6
+
+# Codec
+codec: !new:audiocodecs.StableCodec
+    sample_rate: !ref <sample_rate>
+    num_codebooks: !ref <num_codebooks>
+    vocab_size: !ref <vocab_size>
+    mode: !ref <mode>

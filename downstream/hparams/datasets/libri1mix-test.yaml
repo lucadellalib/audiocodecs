@@ -1,0 +1,15 @@
+# ###########################################################################################
+# Dataset: Libri1Mix-100 test
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+dataset: LibriMix
+
+# Data preparation
+sample_rate: 16000
+data_folder: !PLACEHOLDER
+test_csv: !ref <save_folder>/test.csv
+splits: [test]
+num_speakers: 1
+add_noise: True
+version: wav16k/min

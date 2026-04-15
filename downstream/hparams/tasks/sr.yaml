@@ -1,0 +1,79 @@
+# ###########################################################################################
+# Task: Speech resynthesis
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+task: sr
+
+# Seed needs to be set at top of YAML
+seed: 0
+__set_seed: !apply:torch.manual_seed [!ref <seed>]
+
+# Output folders
+output_folder: !ref results/<task>/<dataset>/<experiment_name>/<seed>
+save_folder: !ref <output_folder>/save
+cache_folder: !name:huggingface_hub.constants.HUGGINGFACE_HUB_CACHE
+
+# Save options
+compute_metrics: True
+compute_ref_metrics: False
+save_audios: False
+use_profiler: True
+
+# Preprocessing parameters
+test_remove_if_longer: 60.0  # Seconds
+test_remove_if_shorter: 0.0  # Seconds
+
+# Test parameters
+test_batch_size: 1
+dataloader_workers: 4
+
+# Codec parameters
+mode: reconstruct
+
+# Performance metrics parameters
+dwer_hub: small
+wavlm_sim_hub: microsoft/wavlm-base-sv
+ecapatdnn_sim_hub: speechbrain/spkrec-ecapa-voxceleb
+
+# Performance metrics
+utmos_computer: !name:metrics.utmos.UTMOS
+    sample_rate: !ref <sample_rate>
+
+dnsmos_computer: !name:metrics.dnsmos.DNSMOS
+    sample_rate: !ref <sample_rate>
+
+stoi_computer: !name:metrics.stoi.STOI
+    sample_rate: !ref <sample_rate>
+
+pesq_computer: !name:metrics.pesq.PESQ
+    sample_rate: !ref <sample_rate>
+
+meld_computer: !name:metrics.mel_distance.MelDistance
+    sample_rate: !ref <sample_rate>
+
+stftd_computer: !name:metrics.stft_distance.STFTDistance
+    sample_rate: !ref <sample_rate>
+
+dwer_computer: !name:metrics.dwer.DWER
+    model_hub: !ref <dwer_hub>
+    sample_rate: !ref <sample_rate>
+    save_path: !ref <cache_folder>
+
+wavlm_sim_computer: !name:metrics.speaker_similarity.SpkSimWavLM
+    model_hub: !ref <wavlm_sim_hub>
+    save_path: !ref <cache_folder>
+    sample_rate: !ref <sample_rate>
+
+ecapatdnn_sim_computer: !name:metrics.speaker_similarity.SpkSimECAPATDNN
+    model_hub: !ref <ecapatdnn_sim_hub>
+    sample_rate: !ref <sample_rate>
+    save_path: !apply:os.path.join [!ref <cache_folder>, models--speechbrain--spkrec-ecapa-voxceleb]
+
+codebook_util_computer: !name:metrics.codebook_util.CodebookUtil
+    num_codebooks: !ref <num_codebooks>
+    vocab_size: !ref <vocab_size>
+
+# Counters, checkpointers, loggers, etc.
+train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
+    save_file: !ref <output_folder>/train_log.txt

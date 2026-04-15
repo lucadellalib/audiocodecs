@@ -74,11 +74,30 @@ class WavLMKmeans(Codec):
         return feats
 
     # override
+    def _sig_to_qfeats(self, sig, length):
+        # sig: [B, T]
+        feats = self.model.sig_to_feats(sig)
+        toks = self.model.feats_to_toks(feats)  # [B, N, K]
+        qfeats = self.model.toks_to_qfeats(toks).mean(dim=-1)
+        return qfeats
+
+    # override
     def _toks_to_sig(self, toks, length):
         # toks: [B, N, K]
         qfeats = self.model.toks_to_qfeats(toks)
         feats = self.model.qfeats_to_feats(qfeats)
         sig = self.model.feats_to_sig(feats)[:, 0]  # [B, T]
+        return sig
+
+    # override
+    def _toks_to_qfeats(self, toks, length):
+        # toks: [B, N, K=1]
+        qfeats = self.model.toks_to_qfeats(toks).mean(dim=-1)
+        return qfeats
+
+    # override
+    def _feats_to_sig(self, feats, length):
+        sig = self.model.feats_to_sig(feats[..., None])[:, 0]
         return sig
 
 
@@ -107,6 +126,8 @@ if __name__ == "__main__":
             print(embs.shape)
             if mode in ["encode", "reconstruct"]:
                 output = codec.sig_to_feats(input)
+                print(output.shape)
+                output = codec.sig_to_qfeats(input)
                 print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")

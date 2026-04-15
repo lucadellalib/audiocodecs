@@ -824,6 +824,7 @@ class LlamaDecoder(LlamaEncoder):
         top_p: "float" = 0.9,
         temp: "float" = 1.0,
         use_kv_cache: "bool" = True,
+        batch_parallel: "bool" = True,
     ) -> "List[Tensor]":
         """Autoregressively generate a sequence of tokens starting from the given prefix tokens.
 
@@ -862,11 +863,13 @@ class LlamaDecoder(LlamaEncoder):
             values lower than 1.0 decrease the randomness by sharpening the probability distribution.
         use_kv_cache:
             True to speed up generation via KV caching, False otherwise.
+        batch_parallel:
+            True to parallelize generation over batch dimension, False otherwise.
 
         Returns
         -------
-            A list of tensors, where each tensor is of shape (batch_size, seq_length) containing
-            the generated sequence of tokens. The generation process will stop once the EOS
+            A list of tensors, where each tensor is of shape (seq_length,) containing the
+            generated sequence of tokens. The generation process will stop once the EOS
             token is generated or the maximum number of tokens (max_gen_toks) is reached.
 
         """
@@ -881,16 +884,31 @@ class LlamaDecoder(LlamaEncoder):
             prompt_embs = prompt_embs.to(device)
 
         with torch.no_grad():
-            hyp_toks = self._greedy_search(
-                bos_toks,
-                eos_id,
-                prompt_embs,
-                max_gen_toks,
-                eos_threshold,
-                top_p,
-                temp,
-                use_kv_cache,
-            )
+            if batch_parallel:
+                hyp_toks = self._greedy_search(
+                    bos_toks,
+                    eos_id,
+                    prompt_embs,
+                    max_gen_toks,
+                    eos_threshold,
+                    top_p,
+                    temp,
+                    use_kv_cache,
+                )
+            else:
+                hyp_toks = []
+                for i in range(bos_toks.shape[0]):
+                    hyp_toks_i = self._greedy_search(
+                        bos_toks[i][None],
+                        eos_id,
+                        prompt_embs[i][None],
+                        max_gen_toks,
+                        eos_threshold,
+                        top_p,
+                        temp,
+                        use_kv_cache,
+                    )[0]
+                    hyp_toks.append(hyp_toks_i)
 
         if was_training:
             self.train()

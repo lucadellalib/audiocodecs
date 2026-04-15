@@ -4,16 +4,33 @@ A [SpeechBrain](https://speechbrain.github.io) codebase for benchmarking audio c
 
 ---------------------------------------------------------------------------------------------------------
 
-## 🚀 Implemented Tasks
+## 🚀 Tasks
 
 - Automatic speech recognition (ASR)
+- Intent classification (IC)
+- Keyword spotting (KS)
 - Speech enhancement (SE)
 - Speech emotion recognition (SER)
 - Speaker identification (SI)
+- Speech language modeling (SLM)
 - Speech resynthesis (SR)
 - Speech separation (SS)
 - Text-to-speech (TTS)
 - Voice conversion (VC)
+
+---------------------------------------------------------------------------------------------------------
+
+## 📰 Changelog
+
+### v0.0.2 (2026-04-15)
+
+- Added new downstream tasks, datasets, and metrics
+- Introduced a more scalable experiment configuration system
+- Improved the overall code structure
+
+### v0.0.1 (2025-02-12)
+
+- Initial release (available at https://github.com/lucadellalib/audiocodecs/tree/v0.0.1)
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -67,6 +84,28 @@ Download the dataset from [Zenodo](https://zenodo.org/records/14791114).
 Extract it to a folder named `MiniMLS`.
 
 Expected folder structure: `MiniMLS/{mls_dutch, mls_french, mls_german, mls_italian, mls_polish, mls_portuguese, mls_spanish}/test`
+
+---------------------------------------------------------------------------------------------------------
+
+### 📌 SLURP
+
+Download the dataset from [Zenodo](https://zenodo.org/records/4274930).
+
+Extract `slurp_real.tar.gz` and `slurp_synth.tar.gz` to a folder named `SLURP`.
+
+Download all the JSONL files from the [official repository](https://github.com/pswietojanski/slurp/tree/master/dataset/slurp) into `SLURP`.
+
+Expected folder structure: `SLURP/{slurp_real, slurp_synth, devel.jsonl, test.jsonl, train.jsonl, train_synthetic.jsonl}`
+
+---------------------------------------------------------------------------------------------------------
+
+### 📌 Speech Commands
+
+Download the dataset from the [official link](http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz).
+
+Extract it to a folder named `SpeechCommands`.
+
+Expected folder structure: `SpeechCommands/{_background_noise_, backward, bed, bird, cat, ..., validation_list.txt}`
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -134,24 +173,65 @@ To do so, open a terminal and run:
 python download.py
 ```
 
+To make the experiment configuration system more scalable, we introduce a new feature: **YAML file merging**.
+
+Instead of having a single YAML file defining everything, from the codec to the dataset and downstream architecture,
+you can now use separate configuration files for each component.
+
+The main script will automatically merge them into a single `config.yaml` file, which is saved in the experiment results directory.
+
+The new configuration system is backward compatible, meaning that you can still define everything in a single YAML file if you prefer (see `hparams/_legacy`).
+As a result, the merged `config.yaml` can also be run directly later to reproduce an experiment.
+
+The only requirement is that there must be no duplicate keys across the YAML files being combined. See the examples in `hparams`.
+
 To run an experiment, navigate to `<path-to-repository>/downstream`, open a terminal and run:
 
 ```bash
-python {train,test}_<task>.py hparams/<task>/<dataset>/<config>.yaml --data_folder <path-to-data-folder>
+python {train,test}_<task>.py \
+hparams/<task>/<config>.yaml hparams/<codec>/<config>.yaml hparams/<dataset>/<config>.yaml \
+--data_folder <path-to-data-folder>
 ```
 
 This command automatically creates a `results` directory, where all logs, checkpoints, metrics, etc. will be stored.
+
+For example:
+
+```bash
+python test_sr.py \
+hparams/tasks/sr.yaml hparams/codecs/bigcodec.yaml hparams/datasets/librispeech-test.yaml \
+--data_folder data/LibriSpeech \
+--save_audios True
+```
 
 ---------------------------------------------------------------------------------------------------------
 
 ## @ Citing
 
 ```
-@article{dellalibera2025focalcodec,
-    title   = {{FocalCodec}: Low-Bitrate Speech Coding via Focal Modulation Networks},
-    author  = {Luca {Della Libera} and Francesco Paissan and Cem Subakan and Mirco Ravanelli},
-    journal = {arXiv preprint arXiv:2502.04465},
-    year    = {2025},
+@inproceedings{dellalibera2025focalcodec,
+    title     = {{FocalCodec}: Low-Bitrate Speech Coding via Focal Modulation Networks},
+    author    = {Luca {Della Libera} and Francesco Paissan and Cem Subakan and Mirco Ravanelli},
+    booktitle = {Advances in Neural Information Processing Systems},
+    year      = {2025},
+}
+```
+
+```
+@inproceedings{dellalibera2026focalcodecstream,
+    title     = {{FocalCodec-Stream}: Streaming Low-Bitrate Speech Coding via Causal Distillation},
+    author    = {Luca {Della Libera} and Cem Subakan and Mirco Ravanelli},
+    booktitle = {IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+    year      = {2026},
+}
+```
+
+```
+@article{dellalibera2026dycast,
+    title   = {Beyond Fixed Frames: Dynamic Character-Aligned Speech Tokenization},
+    author  = {Luca {Della Libera} and Cem Subakan and Mirco Ravanelli},
+    journal = {arXiv preprint arXiv:2601.23174},
+    year    = {2026},
 }
 ```
 

@@ -1,0 +1,19 @@
+# ###########################################################################################
+# Codec: HILCodec
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: hilcodec
+
+# Codec parameters
+num_codebooks: 2
+vocab_size: 1024
+embedding_dim: 128
+model_name: hilcodec_speech
+
+# Codec
+codec: !new:audiocodecs.HILCodec
+    sample_rate: !ref <sample_rate>
+    num_codebooks: !ref <num_codebooks>
+    model_name: !ref <model_name>
+    mode: !ref <mode>

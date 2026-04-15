@@ -1,14 +1,22 @@
 beartype  # Required by SpeechTokenizer
 descript-audio-codec
 huggingface_hub
+nemo_toolkit[all]
+safetensors
 speechtokenizer
 tensorboard  # Required by SpeechTokenizer
 torch
 torchaudio
 transformers
 vocos
+audiodec @ git+https://github.com/lucadellalib/AudioDec.git@main#egg=audiodec
 bigcodec @ git+https://github.com/lucadellalib/BigCodec.git@main#egg=bigcodec
+hilcodec @ git+https://github.com/lucadellalib/hilcodec.git@master#egg=hilcodec
+magicodec @ git+https://github.com/lucadellalib/MagiCodec.git@main#egg=magicodec
+past @ git+https://github.com/lucadellalib/PAST.git@main#egg=past
 semanticodec @ git+https://github.com/haoheliu/SemantiCodec-inference@8dc464c3385d2389a695ed3f718f4a0caf3ed33f#egg=semanticodec
+sparktts @ git+https://github.com/lucadellalib/Spark-TTS.git@main#egg=sparktts
 speechbrain @ git+https://github.com/lucadellalib/speechbrain@50ffdc772c0d977390025ee7787735db9b92488c#egg=speechbrain
 stable_codec @ git+https://github.com/lucadellalib/stable-codec.git@main#egg=stable_codec
 wavtokenizer @ git+https://github.com/lucadellalib/WavTokenizer.git@main#egg=wavtokenizer
+xcodec2 @ git+https://github.com/lucadellalib/X-Codec-2.0.git@main#egg=xcodec2

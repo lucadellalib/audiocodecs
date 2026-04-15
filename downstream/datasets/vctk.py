@@ -23,7 +23,6 @@ from collections import defaultdict
 from typing import Optional, Sequence
 
 import speechbrain as sb
-import torch
 import torchaudio
 
 

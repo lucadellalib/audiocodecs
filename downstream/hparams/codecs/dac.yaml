@@ -1,0 +1,19 @@
+# ###########################################################################################
+# Codec: DAC
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: dac
+
+# Codec parameters
+orig_sample_rate: 16000
+num_codebooks: 2
+vocab_size: 1024
+embedding_dim: 1024
+
+# Codec
+codec: !new:audiocodecs.DAC
+    sample_rate: !ref <sample_rate>
+    orig_sample_rate: !ref <orig_sample_rate>
+    num_codebooks: !ref <num_codebooks>
+    mode: !ref <mode>

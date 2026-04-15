@@ -1,0 +1,19 @@
+# ###########################################################################################
+# Dataset: IEMOCAP
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+dataset: IEMOCAP
+
+# Data preparation
+sample_rate: 16000
+data_folder: !PLACEHOLDER
+train_csv:
+    - !ref <save_folder>/Session1.csv
+    - !ref <save_folder>/Session2.csv
+    - !ref <save_folder>/Session3.csv
+    - !ref <save_folder>/Session4.csv
+valid_csv: !ref <save_folder>/Session5F.csv
+test_csv: !ref <save_folder>/Session5M.csv
+splits: [Session1, Session2, Session3, Session4, Session5F, Session5M]
+emotions: [sad, hap, ang, neu]

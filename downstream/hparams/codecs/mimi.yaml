@@ -1,0 +1,17 @@
+# ###########################################################################################
+# Codec: Mimi
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: mimi
+
+# Codec parameters
+num_codebooks: 5
+vocab_size: 2048
+embedding_dim: 256
+
+# Codec
+codec: !new:audiocodecs.Mimi
+    sample_rate: !ref <sample_rate>
+    num_codebooks: !ref <num_codebooks>
+    mode: !ref <mode>

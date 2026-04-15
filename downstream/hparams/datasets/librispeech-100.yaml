@@ -1,0 +1,14 @@
+# ###########################################################################################
+# Dataset: LibriSpeech-100
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+dataset: LibriSpeech
+
+# Data preparation
+sample_rate: 16000
+data_folder: !PLACEHOLDER
+train_csv: [!ref <save_folder>/train-clean-100.csv]
+valid_csv: !ref <save_folder>/dev-clean.csv
+test_csv: !ref <save_folder>/test-clean.csv
+splits: [train-clean-100, dev-clean, test-clean]

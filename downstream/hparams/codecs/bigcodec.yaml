@@ -1,0 +1,16 @@
+# ###########################################################################################
+# Codec: BigCodec
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: bigcodec
+
+# Codec parameters
+num_codebooks: 1
+vocab_size: 8192
+embedding_dim: 8
+
+# Codec
+codec: !new:audiocodecs.BigCodec
+    sample_rate: !ref <sample_rate>
+    mode: !ref <mode>

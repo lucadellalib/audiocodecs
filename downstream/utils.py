@@ -16,18 +16,58 @@
 
 """Common utilities."""
 
+import argparse
 import importlib
 import os
+import sys
+import tempfile
 
+import speechbrain as sb
 from speechbrain.dataio.dataio import merge_csvs
 from speechbrain.dataio.sampler import DynamicBatchSampler
 from speechbrain.utils.distributed import run_on_main
 
 
-__all__ = ["prepare_recipe"]
+__all__ = ["parse_arguments", "prepare_recipe"]
 
 
 _ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+
+def parse_arguments(arg_list=None):
+    """Parses CLI arguments to load and merge multiple SpeechBrain hyperparameter files."""
+    if arg_list is None:
+        arg_list = sys.argv[1:]
+    parser = argparse.ArgumentParser(description="Run a SpeechBrain experiment")
+    parser.add_argument(
+        "param_files",
+        type=str,
+        nargs="+",
+        help="Main YAML hyperparameter file(s): first is primary, others will be merged.",
+    )
+    args, overrides = parser.parse_known_args(arg_list)
+
+    main_hparams_file = args.param_files[0]
+    extra_hparams_files = args.param_files[1:]
+
+    # If there are extra hparams files, merge them all with the main one
+    if extra_hparams_files:
+        hparams_str = ""
+        for hparams_file in [main_hparams_file] + extra_hparams_files:
+            with open(hparams_file) as f:
+                hparams_str += f.read() + "\n"
+
+        with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as tmp:
+            tmp.write(hparams_str)
+            tmp.flush()
+            main_hparams_file = tmp.name
+
+    # Parse SpeechBrain args with the merged param file + CLI overrides
+    hparams_file, run_opts, overrides = sb.parse_arguments(
+        [main_hparams_file] + overrides
+    )
+
+    return hparams_file, run_opts, overrides
 
 
 def prepare_recipe(hparams, run_opts):

@@ -1,0 +1,17 @@
+# ###########################################################################################
+# Codec: X-Codec 2.0
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: xcodec2
+
+# Codec parameters
+num_codebooks: 1
+vocab_size: 65536
+embedding_dim: 8
+
+# Codec
+codec: !new:audiocodecs.XCodec2
+    sample_rate: !ref <sample_rate>
+    num_codebooks: !ref <num_codebooks>
+    mode: !ref <mode>

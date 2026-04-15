@@ -1,0 +1,15 @@
+# ###########################################################################################
+# Dataset: LibriSpeech-460 speaker-split
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+dataset: LibriSpeech
+
+# Data preparation
+sample_rate: 16000
+data_folder: !PLACEHOLDER
+train_csv: [!ref <save_folder>/train-clean-100_0.8_a.csv, !ref <save_folder>/train-clean-360_0.8_a.csv]
+valid_csv: [!ref <save_folder>/train-clean-100_0.1_b.csv, !ref <save_folder>/train-clean-360_0.1_b.csv]
+test_csv: [!ref <save_folder>/train-clean-100_0.1_c.csv, !ref <save_folder>/train-clean-360_0.1_c.csv]
+splits: [train-clean-100, train-clean-360]
+ratios: [0.8, 0.1, 0.1]

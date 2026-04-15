@@ -1,0 +1,14 @@
+# ###########################################################################################
+# Dataset: VCTK
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+dataset: VCTK
+
+# Data preparation
+sample_rate: 16000
+data_folder: !PLACEHOLDER
+test_csv: !ref <save_folder>/train.csv
+splits: [train]
+num_valid_speakers: 0
+num_test_speakers: 0

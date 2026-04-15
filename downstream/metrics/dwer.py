@@ -54,8 +54,8 @@ class DWER(MetricStats):
         self.cer_computer.clear()
 
     @torch.no_grad()
-    def append(self, ids, hyp_sig, ref_sig, lens=None, locales=None):
-        assert hyp_sig.shape == ref_sig.shape
+    def append(self, ids, hyp_sig, ref_sig, lens=None, locales=None, ref_text=None):
+        assert hyp_sig.shape == ref_sig.shape, (hyp_sig.shape, ref_sig.shape)
         assert hyp_sig.ndim == 2
 
         if locales is None:
@@ -63,7 +63,10 @@ class DWER(MetricStats):
         locales = locales * 2
 
         # Concatenate
-        sig = torch.cat([hyp_sig, ref_sig])
+        if ref_text is None:
+            sig = torch.cat([hyp_sig, ref_sig])
+        else:
+            sig = hyp_sig
 
         # Move to device
         self.model.device = sig.device
@@ -89,6 +92,8 @@ class DWER(MetricStats):
                 text += seg.text
             texts.append(text)
 
+        if ref_text is not None:
+            texts += ref_text
         texts = [self.tokenizer.normalize(x) for x in texts]
         texts = [x.split(" ") for x in texts]
         hyp_text = texts[: hyp_sig.shape[0]]
@@ -111,12 +116,13 @@ class DWER(MetricStats):
 
 
 if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     sample_rate = 24000
     ids = ["A", "B"]
-    hyp_sig = torch.randn(2, 2 * sample_rate)
-    ref_sig = torch.randn(2, 2 * sample_rate)
+    hyp_sig = torch.randn(2, 2 * sample_rate, device=device)
+    ref_sig = torch.randn(2, 2 * sample_rate, device=device)
 
-    dwer = DWER("large-v3", sample_rate)
+    dwer = DWER("small", sample_rate)
     dwer.append(ids, hyp_sig, ref_sig)
     print(dwer.summarize("error_rate"))
     print(dwer.summarize("WER"))

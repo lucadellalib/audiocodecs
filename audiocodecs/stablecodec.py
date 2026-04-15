@@ -115,6 +115,16 @@ class StableCodec(Codec):
         return pre_bottleneck_latents
 
     # override
+    def _sig_to_qfeats(self, sig, length):
+        # sig: [B, T]
+        toks = self._sig_to_toks(sig, length)
+        post_bottleneck_latents = self.model.residual_fsq.decode(
+            toks[..., None, :].unbind(dim=-1)
+        )
+        post_bottleneck_latents = post_bottleneck_latents.movedim(-1, -2)
+        return post_bottleneck_latents
+
+    # override
     def _toks_to_sig(self, toks, length):
         # toks: [B, N, K]
         sig = self.model.decode(
@@ -158,6 +168,8 @@ if __name__ == "__main__":
                 print(embs.shape)
                 if mode in ["encode", "reconstruct"]:
                     output = codec.sig_to_feats(input)
+                    print(output.shape)
+                    output = codec.sig_to_qfeats(input)
                     print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")

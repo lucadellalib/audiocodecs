@@ -19,7 +19,7 @@
 """Recipe for training a speech emotion recognition system based on audio tokens.
 
 To run this recipe:
-> python train_ser.py hparams/ser/<dataset>/<config>.yaml
+> python train_ser.py hparams/tasks/<config>.yaml hparams/codecs/<config>.yaml hparams/datasets/<config>.yaml
 
 """
 
@@ -63,11 +63,20 @@ class SpeechEmotionRecognition(sb.Brain):
                     _CACHE[key] = in_toks.cpu()
                     _CACHE["size"] += in_toks.numel()
 
-        # Extract embeddings
-        in_embs = self.modules.embedding(in_toks)  # [B, N, H, K]
+        if self.hparams.use_quantized_feats:
+            # Use quantized features
+            with torch.no_grad():
+                self.hparams.codec.eval().to(self.device)
+                in_embs = self.hparams.codec.toks_to_qfeats(
+                    in_toks, in_lens
+                )  # [B, N, H]
 
-        # Pooling
-        in_embs = self.modules.pooling(in_embs)  # [B, N, H]
+        else:
+            # Extract embeddings
+            in_embs = self.modules.embedding(in_toks)  # [B, N, H, K]
+
+            # Pooling
+            in_embs = self.modules.pooling(in_embs)  # [B, N, H]
 
         # Forward encoder
         out_embs, _ = self.modules.encoder(in_embs, lengths=in_lens)  # [B, N, D]
@@ -142,7 +151,9 @@ class SpeechEmotionRecognition(sb.Brain):
 
 if __name__ == "__main__":
     # Command-line interface
-    hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
+    from utils import parse_arguments
+
+    hparams_file, run_opts, overrides = parse_arguments(sys.argv[1:])
     with open(hparams_file) as fin:
         hparams = load_hyperpyyaml(fin, overrides)
 
@@ -160,13 +171,19 @@ if __name__ == "__main__":
         overrides=overrides,
     )
 
+    # Log command and dump hyperpameters for reproducibility
+    sb.core.logger.warn(f"Command: {' '.join(sys.argv)}")
+    sb.core.shutil.copy(
+        hparams_file, os.path.join(hparams["output_folder"], "config.yaml")
+    )
+
     # Prepare recipe
     from utils import prepare_recipe
 
     hparams, train_data, valid_data, test_data = prepare_recipe(hparams, run_opts)
 
     # Use pretrained embeddings
-    if hparams["pretrain_embeddings"]:
+    if hparams["pretrain_embeddings"] and not hparams["use_quantized_feats"]:
         embs = hparams["codec"].to(run_opts.get("device", "cpu")).embs()
         embs = embs.detach().flatten(end_dim=-2)
         hparams["embedding"].weight.data.copy_(embs)

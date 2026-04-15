@@ -19,7 +19,7 @@
 """Recipe for training a speech enhancement system based on audio tokens.
 
 To run this recipe:
-> python train_se.py hparams/se/<dataset>/<config>.yaml
+> python train_se.py hparams/tasks/<config>.yaml hparams/codecs/<config>.yaml hparams/datasets/<config>.yaml
 
 """
 
@@ -74,11 +74,20 @@ class SpeechEnhancement(sb.Brain):
                     _CACHE[key] = in_toks.cpu(), out_toks.cpu()
                     _CACHE["size"] += in_toks.numel() + out_toks.numel()
 
-        # Extract embeddings
-        in_embs = self.modules.embedding(in_toks)  # [B, N, H, K]
+        if self.hparams.use_quantized_feats:
+            # Use quantized features
+            with torch.no_grad():
+                self.hparams.codec.eval().to(self.device)
+                in_embs = self.hparams.codec.toks_to_qfeats(
+                    in_toks, in_lens
+                )  # [B, N, H]
 
-        # Pooling
-        in_embs = self.modules.pooling(in_embs)  # [B, N, H]
+        else:
+            # Extract embeddings
+            in_embs = self.modules.embedding(in_toks)  # [B, N, H, K]
+
+            # Pooling
+            in_embs = self.modules.pooling(in_embs)  # [B, N, H]
 
         # Forward encoder
         out_embs = self.modules.encoder.encode(in_embs, in_lens)  # [B, N, D]
@@ -142,33 +151,35 @@ class SpeechEnhancement(sb.Brain):
 
         if self.hparams.compute_metrics:
             self.utmos_metric.append(IDs, hyp_sig, lens)
-            self.rec_utmos_metric.append(IDs, rec_sig, lens)
-            self.ref_utmos_metric.append(IDs, out_sig, lens)
-
             self.dnsmos_metric.append(IDs, hyp_sig, lens)
-            self.rec_dnsmos_metric.append(IDs, rec_sig, lens)
-            self.ref_dnsmos_metric.append(IDs, out_sig, lens)
-
             self.stoi_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_stoi_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.pesq_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_pesq_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.meld_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_meld_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.stftd_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_stftd_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.dwer_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_dwer_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.wavlm_sim_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_wavlm_sim_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.ecapatdnn_sim_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_ecapatdnn_sim_metric.append(IDs, rec_sig, out_sig, lens)
+
+            if self.hparams.compute_ref_metrics:
+                self.rec_utmos_metric.append(IDs, rec_sig, lens)
+                self.ref_utmos_metric.append(IDs, out_sig, lens)
+
+                self.rec_dnsmos_metric.append(IDs, rec_sig, lens)
+                self.ref_dnsmos_metric.append(IDs, out_sig, lens)
+
+                self.rec_stoi_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_pesq_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_meld_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_stftd_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_dwer_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_wavlm_sim_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_ecapatdnn_sim_metric.append(IDs, rec_sig, out_sig, lens)
 
         if self.hparams.save_audios:
             save_folder = os.path.join(self.hparams.output_folder, "audios")
@@ -202,47 +213,49 @@ class SpeechEnhancement(sb.Brain):
             self.ter_metric = self.hparams.ter_computer()
         if stage == sb.Stage.TEST and self.hparams.compute_metrics:
             self.utmos_metric = self.hparams.utmos_computer()
-            self.rec_utmos_metric = self.hparams.utmos_computer(
-                model=self.utmos_metric.model
-            )
-            self.ref_utmos_metric = self.hparams.utmos_computer(
-                model=self.utmos_metric.model
-            )
-
             self.dnsmos_metric = self.hparams.dnsmos_computer()
-            self.rec_dnsmos_metric = self.hparams.dnsmos_computer(
-                model=self.dnsmos_metric.model
-            )
-            self.ref_dnsmos_metric = self.hparams.dnsmos_computer(
-                model=self.dnsmos_metric.model
-            )
-
             self.stoi_metric = self.hparams.stoi_computer()
-            self.rec_stoi_metric = self.hparams.stoi_computer()
-
             self.pesq_metric = self.hparams.pesq_computer()
-            self.rec_pesq_metric = self.hparams.pesq_computer()
-
             self.meld_metric = self.hparams.meld_computer()
-            self.rec_meld_metric = self.hparams.meld_computer()
-
             self.stftd_metric = self.hparams.stftd_computer()
-            self.rec_stftd_metric = self.hparams.stftd_computer()
-
             self.dwer_metric = self.hparams.dwer_computer()
-            self.rec_dwer_metric = self.hparams.dwer_computer(
-                model=self.dwer_metric.model
-            )
-
             self.wavlm_sim_metric = self.hparams.wavlm_sim_computer()
-            self.rec_wavlm_sim_metric = self.hparams.wavlm_sim_computer(
-                model=self.wavlm_sim_metric.model
-            )
-
             self.ecapatdnn_sim_metric = self.hparams.ecapatdnn_sim_computer()
-            self.rec_ecapatdnn_sim_metric = self.hparams.ecapatdnn_sim_computer(
-                model=self.ecapatdnn_sim_metric.model
-            )
+
+            if self.hparams.compute_ref_metrics:
+                self.rec_utmos_metric = self.hparams.utmos_computer(
+                    model=self.utmos_metric.model
+                )
+                self.ref_utmos_metric = self.hparams.utmos_computer(
+                    model=self.utmos_metric.model
+                )
+
+                self.rec_dnsmos_metric = self.hparams.dnsmos_computer(
+                    model=self.dnsmos_metric.model
+                )
+                self.ref_dnsmos_metric = self.hparams.dnsmos_computer(
+                    model=self.dnsmos_metric.model
+                )
+
+                self.rec_stoi_metric = self.hparams.stoi_computer()
+
+                self.rec_pesq_metric = self.hparams.pesq_computer()
+
+                self.rec_meld_metric = self.hparams.meld_computer()
+
+                self.rec_stftd_metric = self.hparams.stftd_computer()
+
+                self.rec_dwer_metric = self.hparams.dwer_computer(
+                    model=self.dwer_metric.model
+                )
+
+                self.rec_wavlm_sim_metric = self.hparams.wavlm_sim_computer(
+                    model=self.wavlm_sim_metric.model
+                )
+
+                self.rec_ecapatdnn_sim_metric = self.hparams.ecapatdnn_sim_computer(
+                    model=self.ecapatdnn_sim_metric.model
+                )
 
     def on_stage_end(self, stage, stage_loss, epoch=None):
         """Gets called at the end of each epoch."""
@@ -280,43 +293,51 @@ class SpeechEnhancement(sb.Brain):
         elif stage == sb.Stage.TEST:
             if self.hparams.compute_metrics:
                 stage_stats["UTMOS"] = self.utmos_metric.summarize("average")
-                stage_stats["RecUTMOS"] = self.rec_utmos_metric.summarize("average")
-                stage_stats["RefUTMOS"] = self.ref_utmos_metric.summarize("average")
-
                 stage_stats["DNSMOS"] = self.dnsmos_metric.summarize("average")
-                stage_stats["RecDNSMOS"] = self.rec_dnsmos_metric.summarize("average")
-                stage_stats["RefDNSMOS"] = self.ref_dnsmos_metric.summarize("average")
-
                 stage_stats["STOI"] = self.stoi_metric.summarize("average")
-                stage_stats["RecSTOI"] = self.rec_stoi_metric.summarize("average")
-
                 stage_stats["PESQ"] = self.pesq_metric.summarize("average")
-                stage_stats["RecPESQ"] = self.rec_pesq_metric.summarize("average")
-
                 stage_stats["MelD"] = self.meld_metric.summarize("average")
-                stage_stats["RecMelD"] = self.rec_meld_metric.summarize("average")
-
                 stage_stats["STFTD"] = self.stftd_metric.summarize("average")
-                stage_stats["RecSTFTD"] = self.rec_stftd_metric.summarize("average")
-
                 stage_stats["dWER"] = self.dwer_metric.summarize("error_rate")
                 stage_stats["dCER"] = self.dwer_metric.summarize("error_rate_char")
-                stage_stats["RecdWER"] = self.rec_dwer_metric.summarize("error_rate")
-                stage_stats["RecdCER"] = self.rec_dwer_metric.summarize(
-                    "error_rate_char"
-                )
-
                 stage_stats["WavLMSim"] = self.wavlm_sim_metric.summarize("average")
-                stage_stats["RecWavLMSim"] = self.rec_wavlm_sim_metric.summarize(
-                    "average"
-                )
-
                 stage_stats["ECAPATDNNSim"] = self.ecapatdnn_sim_metric.summarize(
                     "average"
                 )
-                stage_stats["RecECAPATDNNSim"] = (
-                    self.rec_ecapatdnn_sim_metric.summarize("average")
-                )
+
+                if self.hparams.compute_ref_metrics:
+                    stage_stats["RecUTMOS"] = self.rec_utmos_metric.summarize("average")
+                    stage_stats["RefUTMOS"] = self.ref_utmos_metric.summarize("average")
+
+                    stage_stats["RecDNSMOS"] = self.rec_dnsmos_metric.summarize(
+                        "average"
+                    )
+                    stage_stats["RefDNSMOS"] = self.ref_dnsmos_metric.summarize(
+                        "average"
+                    )
+
+                    stage_stats["RecSTOI"] = self.rec_stoi_metric.summarize("average")
+
+                    stage_stats["RecPESQ"] = self.rec_pesq_metric.summarize("average")
+
+                    stage_stats["RecMelD"] = self.rec_meld_metric.summarize("average")
+
+                    stage_stats["RecSTFTD"] = self.rec_stftd_metric.summarize("average")
+
+                    stage_stats["RecdWER"] = self.rec_dwer_metric.summarize(
+                        "error_rate"
+                    )
+                    stage_stats["RecdCER"] = self.rec_dwer_metric.summarize(
+                        "error_rate_char"
+                    )
+
+                    stage_stats["RecWavLMSim"] = self.rec_wavlm_sim_metric.summarize(
+                        "average"
+                    )
+
+                    stage_stats["RecECAPATDNNSim"] = (
+                        self.rec_ecapatdnn_sim_metric.summarize("average")
+                    )
             self.hparams.train_logger.log_stats(
                 stats_meta={"Epoch loaded": self.hparams.epoch_counter.current},
                 test_stats=stage_stats,
@@ -328,15 +349,19 @@ class SpeechEnhancement(sb.Brain):
                     with open(dwer_file, "w") as w:
                         self.dwer_metric.write_stats(w)
 
-                if self.hparams.compute_metrics:
-                    dwer_file = os.path.join(self.hparams.output_folder, "rec_dwer.txt")
-                    with open(dwer_file, "w") as w:
-                        self.rec_dwer_metric.write_stats(w)
+                    if self.hparams.compute_ref_metrics:
+                        dwer_file = os.path.join(
+                            self.hparams.output_folder, "rec_dwer.txt"
+                        )
+                        with open(dwer_file, "w") as w:
+                            self.rec_dwer_metric.write_stats(w)
 
 
 if __name__ == "__main__":
     # Command-line interface
-    hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
+    from utils import parse_arguments
+
+    hparams_file, run_opts, overrides = parse_arguments(sys.argv[1:])
     with open(hparams_file) as fin:
         hparams = load_hyperpyyaml(fin, overrides)
 
@@ -354,13 +379,19 @@ if __name__ == "__main__":
         overrides=overrides,
     )
 
+    # Log command and dump hyperpameters for reproducibility
+    sb.core.logger.warn(f"Command: {' '.join(sys.argv)}")
+    sb.core.shutil.copy(
+        hparams_file, os.path.join(hparams["output_folder"], "config.yaml")
+    )
+
     # Prepare recipe
     from utils import prepare_recipe
 
     hparams, train_data, valid_data, test_data = prepare_recipe(hparams, run_opts)
 
     # Use pretrained embeddings
-    if hparams["pretrain_embeddings"]:
+    if hparams["pretrain_embeddings"] and not hparams["use_quantized_feats"]:
         embs = hparams["codec"].to(run_opts.get("device", "cpu")).embs()
         embs = embs.detach().flatten(end_dim=-2)
         hparams["embedding"].weight.data.copy_(embs)

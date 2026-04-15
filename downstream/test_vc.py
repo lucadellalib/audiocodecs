@@ -19,11 +19,10 @@
 """Recipe for testing a voice conversion system based on audio tokens.
 
 To run this recipe:
-> python test_vc.py hparams/vc/<dataset>/<config>.yaml
+> python test_vc.py hparams/tasks/<config>.yaml hparams/codecs/<config>.yaml hparams/datasets/<config>.yaml
 
 """
 
-import math
 import os
 import sys
 import time
@@ -31,7 +30,6 @@ import warnings
 
 import speechbrain as sb
 import torch
-import torchaudio
 from hyperpyyaml import load_hyperpyyaml
 from speechbrain.dataio.dataio import write_audio
 from speechbrain.utils.distributed import if_main_process
@@ -71,10 +69,6 @@ class VoiceConversion(sb.Brain):
             assert out_lens.numel() == 1 and out_lens[0] == 1.0
             spk_sigs = spk_sigs[0]
             self.vocode(IDs, in_sig, out_sig, hyp_toks, out_toks, out_lens, spk_sigs)
-            for k in range(out_toks.shape[-1]):
-                idxes, counts = out_toks[..., k].unique(return_counts=True)
-                self.toks_count_per_codebook[idxes, k] += counts
-            self.total_toks_per_codebook += out_toks.shape[:2].numel()
 
         return torch.tensor(0.0, device=self.device)
 
@@ -94,14 +88,18 @@ class VoiceConversion(sb.Brain):
             ts = time.time()
 
             # Voice conversion
-            if self.hparams.codec.__class__.__name__ in [
-                "DAC",
-                "Encodec",
-                "Mimi",
-                "SemantiCodec",
-                "SpeechTokenizer",
-                "StableCodec",
-            ]:
+            if self.hparams.codec.__class__.__name__ == "BiCodec":
+                # Stack semantic tokens from source with acoustic tokens from reference
+                spk_toks = self.hparams.codec.sig_to_toks(spk_sig)  # [B, N_s, K]
+                assert spk_toks.shape[1] >= 32
+                acoustic_spk_toks = spk_toks[:, :32]
+                semantic_toks = hyp_toks[:, 32:]
+                hyp_toks = torch.cat(
+                    [acoustic_spk_toks, semantic_toks], dim=-2
+                )  # [B, N_1, K]
+                hyp_sig = self.hparams.codec.toks_to_sig(hyp_toks, lens)  # [B, T]
+
+            elif self.hparams.num_codebooks > 1:
                 # Stack codebook 0 from source with codebooks 1:K from reference
                 spk_toks = self.hparams.codec.sig_to_toks(spk_sig)  #  [B, N_s, K]
                 if spk_toks.shape[1] > hyp_toks.shape[1]:
@@ -115,89 +113,19 @@ class VoiceConversion(sb.Brain):
                 )  # [B, N_1, K]
                 hyp_sig = self.hparams.codec.toks_to_sig(hyp_toks, lens)  # [B, T]
 
-            elif self.hparams.codec.__class__.__name__ == "BigCodec":
-                assert self.hparams.sample_rate == 16000
+            else:
+                # Single codebook, use k-NN
                 spk_sigs = [spk_sig]
                 matching_set = [
-                    self.hparams.codec.encoder(sig[:, None])
-                    .movedim(-1, -2)
-                    .flatten(end_dim=-2)
+                    self.hparams.codec.sig_to_feats(sig).flatten(end_dim=-2)
                     for sig in spk_sigs
                 ]
                 matching_set = torch.cat(matching_set)
-                hyp_feats = self.hparams.codec.quantizer.vq2emb(hyp_toks)
+                hyp_feats = self.hparams.codec.toks_to_qfeats(hyp_toks)
                 hyp_feats = knn(
                     hyp_feats, matching_set, self.hparams.topk, self.hparams.num_splits
                 ).mean(dim=-2)
-                hyp_sig = self.hparams.codec.decoder(
-                    hyp_feats.movedim(-1, -2), vq=False
-                )[
-                    :, 0
-                ]  # [B, T]
-
-            elif self.hparams.codec.__class__.__name__ == "FocalCodec":
-                assert self.hparams.sample_rate == 16000
-                spk_sigs = [spk_sig]
-                matching_set = [
-                    self.hparams.codec.model.sig_to_feats(sig).flatten(end_dim=-2)
-                    for sig in spk_sigs
-                ]
-                matching_set = torch.cat(matching_set)
-                hyp_sig = self.hparams.codec.model.toks_to_sig(
-                    hyp_toks[..., 0],
-                    matching_set,
-                    self.hparams.topk,
-                    self.hparams.num_splits,
-                )  # [B, T]
-
-            elif self.hparams.codec.__class__.__name__ == "WavLMKmeans":
-                assert self.hparams.sample_rate == 16000
-                assert self.hparams.num_codebooks == 1
-                spk_sigs = [spk_sig]
-                matching_set = [
-                    self.hparams.codec.model.sig_to_feats(sig)[..., 0].flatten(
-                        end_dim=-2
-                    )
-                    for sig in spk_sigs
-                ]
-                matching_set = torch.cat(matching_set)
-                hyp_feats = self.hparams.codec.model.toks_to_qfeats(hyp_toks)
-                hyp_feats = self.hparams.codec.model.qfeats_to_feats(hyp_feats)[..., 0]
-                hyp_feats = knn(
-                    hyp_feats, matching_set, self.hparams.topk, self.hparams.num_splits
-                ).mean(dim=-2)
-                hyp_sig = self.hparams.codec.model.feats_to_sig(hyp_feats[..., None])[
-                    :, 0
-                ]  # [B, T]
-
-            elif self.hparams.codec.__class__.__name__ == "WavTokenizer":
-                assert self.hparams.sample_rate == 16000
-                spk_sig = torchaudio.functional.resample(
-                    spk_sig, self.hparams.sample_rate, 24000
-                )
-                spk_sigs = [spk_sig]
-                matching_set = [
-                    self.hparams.codec.model.feature_extractor.encodec.encoder(
-                        sig[:, None]
-                    )
-                    .movedim(-1, -2)
-                    .flatten(end_dim=-2)
-                    for sig in spk_sigs
-                ]
-                matching_set = torch.cat(matching_set)
-                hyp_feats = self.hparams.codec.model.codes_to_features(
-                    hyp_toks.movedim(-1, 0)
-                ).movedim(-1, -2)
-                hyp_feats = knn(
-                    hyp_feats, matching_set, self.hparams.topk, self.hparams.num_splits
-                ).mean(dim=-2)
-                hyp_sig = self.hparams.codec.model.decode(
-                    hyp_feats.movedim(-1, -2),
-                    bandwidth_id=torch.tensor(0, device=hyp_feats.device),
-                )  # [B, T]
-                hyp_sig = torchaudio.functional.resample(
-                    hyp_sig, 24000, self.hparams.sample_rate
-                )
+                hyp_sig = self.hparams.codec.feats_to_sig(hyp_feats)
 
             torch.cuda.synchronize()
             self.process_time_decode += time.time() - ts
@@ -223,33 +151,36 @@ class VoiceConversion(sb.Brain):
 
         if self.hparams.compute_metrics:
             self.utmos_metric.append(IDs, hyp_sig, lens)
-            self.rec_utmos_metric.append(IDs, rec_sig, lens)
-            self.ref_utmos_metric.append(IDs, out_sig, lens)
-
             self.dnsmos_metric.append(IDs, hyp_sig, lens)
-            self.rec_dnsmos_metric.append(IDs, rec_sig, lens)
-            self.ref_dnsmos_metric.append(IDs, out_sig, lens)
-
             self.stoi_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_stoi_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.pesq_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_pesq_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.meld_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_meld_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.stftd_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_stftd_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.dwer_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_dwer_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.wavlm_sim_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_wavlm_sim_metric.append(IDs, rec_sig, out_sig, lens)
-
             self.ecapatdnn_sim_metric.append(IDs, hyp_sig, out_sig, lens)
-            self.rec_ecapatdnn_sim_metric.append(IDs, rec_sig, out_sig, lens)
+            self.codebook_util_metric.append(out_toks, lens)
+
+            if self.hparams.compute_ref_metrics:
+                self.rec_utmos_metric.append(IDs, rec_sig, lens)
+                self.ref_utmos_metric.append(IDs, out_sig, lens)
+
+                self.rec_dnsmos_metric.append(IDs, rec_sig, lens)
+                self.ref_dnsmos_metric.append(IDs, out_sig, lens)
+
+                self.rec_stoi_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_pesq_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_meld_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_stftd_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_dwer_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_wavlm_sim_metric.append(IDs, rec_sig, out_sig, lens)
+
+                self.rec_ecapatdnn_sim_metric.append(IDs, rec_sig, out_sig, lens)
 
         if self.hparams.save_audios:
             save_folder = os.path.join(self.hparams.output_folder, "audios")
@@ -284,58 +215,55 @@ class VoiceConversion(sb.Brain):
     def on_stage_start(self, stage, epoch=None):
         """Gets called at the beginning of each epoch."""
         super().on_stage_start(stage, epoch)
-        self.toks_count_per_codebook = torch.zeros(
-            self.hparams.vocab_size,
-            self.hparams.num_codebooks,
-            device=self.device,
-        )
-        self.total_toks_per_codebook = 0
         self.real_time = 0.0
         self.process_time_encode = 0.0
         self.process_time_decode = 0.0
         if self.hparams.compute_metrics:
             self.utmos_metric = self.hparams.utmos_computer()
-            self.rec_utmos_metric = self.hparams.utmos_computer(
-                model=self.utmos_metric.model
-            )
-            self.ref_utmos_metric = self.hparams.utmos_computer(
-                model=self.utmos_metric.model
-            )
-
             self.dnsmos_metric = self.hparams.dnsmos_computer()
-            self.rec_dnsmos_metric = self.hparams.dnsmos_computer(
-                model=self.dnsmos_metric.model
-            )
-            self.ref_dnsmos_metric = self.hparams.dnsmos_computer(
-                model=self.dnsmos_metric.model
-            )
-
             self.stoi_metric = self.hparams.stoi_computer()
-            self.rec_stoi_metric = self.hparams.stoi_computer()
-
             self.pesq_metric = self.hparams.pesq_computer()
-            self.rec_pesq_metric = self.hparams.pesq_computer()
-
             self.meld_metric = self.hparams.meld_computer()
-            self.rec_meld_metric = self.hparams.meld_computer()
-
             self.stftd_metric = self.hparams.stftd_computer()
-            self.rec_stftd_metric = self.hparams.stftd_computer()
-
             self.dwer_metric = self.hparams.dwer_computer()
-            self.rec_dwer_metric = self.hparams.dwer_computer(
-                model=self.dwer_metric.model
-            )
-
             self.wavlm_sim_metric = self.hparams.wavlm_sim_computer()
-            self.rec_wavlm_sim_metric = self.hparams.wavlm_sim_computer(
-                model=self.wavlm_sim_metric.model
-            )
-
             self.ecapatdnn_sim_metric = self.hparams.ecapatdnn_sim_computer()
-            self.rec_ecapatdnn_sim_metric = self.hparams.ecapatdnn_sim_computer(
-                model=self.ecapatdnn_sim_metric.model
-            )
+            self.codebook_util_metric = self.hparams.codebook_util_computer()
+
+            if self.hparams.compute_ref_metrics:
+                self.rec_utmos_metric = self.hparams.utmos_computer(
+                    model=self.utmos_metric.model
+                )
+                self.ref_utmos_metric = self.hparams.utmos_computer(
+                    model=self.utmos_metric.model
+                )
+
+                self.rec_dnsmos_metric = self.hparams.dnsmos_computer(
+                    model=self.dnsmos_metric.model
+                )
+                self.ref_dnsmos_metric = self.hparams.dnsmos_computer(
+                    model=self.dnsmos_metric.model
+                )
+
+                self.rec_stoi_metric = self.hparams.stoi_computer()
+
+                self.rec_pesq_metric = self.hparams.pesq_computer()
+
+                self.rec_meld_metric = self.hparams.meld_computer()
+
+                self.rec_stftd_metric = self.hparams.stftd_computer()
+
+                self.rec_dwer_metric = self.hparams.dwer_computer(
+                    model=self.dwer_metric.model
+                )
+
+                self.rec_wavlm_sim_metric = self.hparams.wavlm_sim_computer(
+                    model=self.wavlm_sim_metric.model
+                )
+
+                self.rec_ecapatdnn_sim_metric = self.hparams.ecapatdnn_sim_computer(
+                    model=self.ecapatdnn_sim_metric.model
+                )
 
     def on_stage_end(self, stage, stage_loss, epoch=None):
         """Gets called at the end of each epoch."""
@@ -345,57 +273,21 @@ class VoiceConversion(sb.Brain):
 
         if self.hparams.compute_metrics:
             stage_stats["UTMOS"] = self.utmos_metric.summarize("average")
-            stage_stats["RecUTMOS"] = self.rec_utmos_metric.summarize("average")
-            stage_stats["RefUTMOS"] = self.ref_utmos_metric.summarize("average")
-
             stage_stats["DNSMOS"] = self.dnsmos_metric.summarize("average")
-            stage_stats["RecDNSMOS"] = self.rec_dnsmos_metric.summarize("average")
-            stage_stats["RefDNSMOS"] = self.ref_dnsmos_metric.summarize("average")
-
             stage_stats["STOI"] = self.stoi_metric.summarize("average")
-            stage_stats["RecSTOI"] = self.rec_stoi_metric.summarize("average")
-
             stage_stats["PESQ"] = self.pesq_metric.summarize("average")
-            stage_stats["RecPESQ"] = self.rec_pesq_metric.summarize("average")
-
             stage_stats["MelD"] = self.meld_metric.summarize("average")
-            stage_stats["RecMelD"] = self.rec_meld_metric.summarize("average")
-
             stage_stats["STFTD"] = self.stftd_metric.summarize("average")
-            stage_stats["RecSTFTD"] = self.rec_stftd_metric.summarize("average")
-
             stage_stats["dWER"] = self.dwer_metric.summarize("error_rate")
             stage_stats["dCER"] = self.dwer_metric.summarize("error_rate_char")
-            stage_stats["RecdWER"] = self.rec_dwer_metric.summarize("error_rate")
-            stage_stats["RecdCER"] = self.rec_dwer_metric.summarize("error_rate_char")
-
             stage_stats["WavLMSim"] = self.wavlm_sim_metric.summarize("average")
-            stage_stats["RecWavLMSim"] = self.rec_wavlm_sim_metric.summarize("average")
-
             stage_stats["ECAPATDNNSim"] = self.ecapatdnn_sim_metric.summarize("average")
-            stage_stats["RecECAPATDNNSim"] = self.rec_ecapatdnn_sim_metric.summarize(
-                "average"
+            stage_stats["CodebookUtil"] = self.codebook_util_metric.summarize(
+                "codebook_util"
             )
-
-            toks_prob_per_codebook = (
-                self.toks_count_per_codebook / self.total_toks_per_codebook
+            stage_stats["NormEntropy"] = self.codebook_util_metric.summarize(
+                "norm_entropy"
             )
-            entropy_per_codebook = -(
-                toks_prob_per_codebook * toks_prob_per_codebook.log2()
-            ).sum(dim=0)
-            stage_stats["NormEntropy"] = entropy_per_codebook.mean() / math.log2(
-                self.hparams.vocab_size
-            )
-            valid_mask = self.toks_count_per_codebook > 0
-            valid_vocab_size = valid_mask.sum(dim=0)
-            stage_stats["NormEntropyValid"] = (
-                -(
-                    (toks_prob_per_codebook / valid_vocab_size.log2())[valid_mask]
-                    * toks_prob_per_codebook[valid_mask].log2()
-                ).sum()
-                / self.toks_count_per_codebook.shape[-1]
-            )
-            stage_stats["ValidVocabSize"] = valid_vocab_size.cpu().tolist()
             stage_stats["RealTime"] = self.real_time
             stage_stats["ProcessTimeEncode"] = self.process_time_encode
             stage_stats["ProcessTimeDecode"] = self.process_time_decode
@@ -404,6 +296,33 @@ class VoiceConversion(sb.Brain):
             ) / self.real_time
             stage_stats["iRTF"] = 1 / stage_stats["RTF"]
 
+            if self.hparams.compute_ref_metrics:
+                stage_stats["RecUTMOS"] = self.rec_utmos_metric.summarize("average")
+                stage_stats["RefUTMOS"] = self.ref_utmos_metric.summarize("average")
+
+                stage_stats["RecDNSMOS"] = self.rec_dnsmos_metric.summarize("average")
+                stage_stats["RefDNSMOS"] = self.ref_dnsmos_metric.summarize("average")
+
+                stage_stats["RecSTOI"] = self.rec_stoi_metric.summarize("average")
+
+                stage_stats["RecPESQ"] = self.rec_pesq_metric.summarize("average")
+
+                stage_stats["RecMelD"] = self.rec_meld_metric.summarize("average")
+
+                stage_stats["RecSTFTD"] = self.rec_stftd_metric.summarize("average")
+
+                stage_stats["RecdWER"] = self.rec_dwer_metric.summarize("error_rate")
+                stage_stats["RecdCER"] = self.rec_dwer_metric.summarize(
+                    "error_rate_char"
+                )
+
+                stage_stats["RecWavLMSim"] = self.rec_wavlm_sim_metric.summarize(
+                    "average"
+                )
+
+                stage_stats["RecECAPATDNNSim"] = (
+                    self.rec_ecapatdnn_sim_metric.summarize("average")
+                )
         self.hparams.train_logger.log_stats(
             stats_meta={},
             test_stats=stage_stats,
@@ -415,9 +334,10 @@ class VoiceConversion(sb.Brain):
                 with open(dwer_file, "w") as w:
                     self.dwer_metric.write_stats(w)
 
-                dwer_file = os.path.join(self.hparams.output_folder, "rec_dwer.txt")
-                with open(dwer_file, "w") as w:
-                    self.rec_dwer_metric.write_stats(w)
+                if self.hparams.compute_ref_metrics:
+                    dwer_file = os.path.join(self.hparams.output_folder, "rec_dwer.txt")
+                    with open(dwer_file, "w") as w:
+                        self.rec_dwer_metric.write_stats(w)
 
 
 # Adapted from:
@@ -464,7 +384,9 @@ def knn(input, matching_set, topk=4, num_splits=1):
 
 if __name__ == "__main__":
     # Command-line interface
-    hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
+    from utils import parse_arguments
+
+    hparams_file, run_opts, overrides = parse_arguments(sys.argv[1:])
     with open(hparams_file) as fin:
         hparams = load_hyperpyyaml(fin, overrides)
 
@@ -480,6 +402,12 @@ if __name__ == "__main__":
         experiment_directory=hparams["output_folder"],
         hyperparams_to_save=hparams_file,
         overrides=overrides,
+    )
+
+    # Log command and dump hyperpameters for reproducibility
+    sb.core.logger.warn(f"Command: {' '.join(sys.argv)}")
+    sb.core.shutil.copy(
+        hparams_file, os.path.join(hparams["output_folder"], "config.yaml")
     )
 
     # Prepare recipe

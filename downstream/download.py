@@ -21,19 +21,28 @@ import logging
 import torch
 from metrics.dnsmos import DNSMOS
 from metrics.dwer import DWER
+from metrics.perplexity import ASRPerplexity
 from metrics.speaker_similarity import SpkSimECAPATDNN, SpkSimWavLM
 from metrics.utmos import UTMOS
 
+from audiocodecs.audiodec import AudioDec
+from audiocodecs.bicodec import BiCodec
 from audiocodecs.bigcodec import BigCodec
 from audiocodecs.dac import DAC
+from audiocodecs.dycast import DyCAST
 from audiocodecs.encodec import Encodec
 from audiocodecs.focalcodec import FocalCodec
+from audiocodecs.hilcodec import HILCodec
+from audiocodecs.magicodec import MagiCodec
 from audiocodecs.mimi import Mimi
+from audiocodecs.nanocodec import NanoCodec
+from audiocodecs.past import PAST
 from audiocodecs.semanticodec import SemantiCodec
 from audiocodecs.speechtokenizer import SpeechTokenizer
 from audiocodecs.stablecodec import StableCodec
 from audiocodecs.wavlm_kmeans import WavLMKmeans
 from audiocodecs.wavtokenizer import WavTokenizer
+from audiocodecs.xcodec2 import XCodec2
 
 
 @torch.no_grad()
@@ -41,6 +50,24 @@ def download_weights():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     sample_rate = 1000
     batch_size = 2
+
+    # AudioDec
+    try:
+        for model_name in AudioDec.MODEL_NAMES:
+            codec = AudioDec(sample_rate, model_name=model_name).eval().to(device)
+            input = torch.zeros(batch_size, 100, device=device)
+            codec(input)
+    except Exception as e:
+        logging.warning(e)
+
+    # BiCodec
+    try:
+        for model_name in BiCodec.MODEL_NAMES:
+            codec = BiCodec(sample_rate, model_name=model_name).eval().to(device)
+            input = torch.zeros(batch_size, 100, device=device)
+            codec(input)
+    except Exception as e:
+        logging.warning(e)
 
     # BigCodec
     try:
@@ -58,6 +85,23 @@ def download_weights():
             codec(input)
         except Exception as e:
             logging.warning(e)
+
+    # DyCAST
+    try:
+        codec = (
+            DyCAST(
+                sample_rate,
+                num_codebooks=32,
+                boundary_source="char_aligner",
+                use_retriever=True,
+            )
+            .eval()
+            .to(device)
+        )
+        input = torch.zeros(batch_size, 100, device=device)
+        codec(input)
+    except Exception as e:
+        logging.warning(e)
 
     # EnCodec
     for num_codebooks in [2, 4, 8, 16, 32]:
@@ -77,6 +121,23 @@ def download_weights():
     except Exception as e:
         logging.warning(e)
 
+    # HILCodec
+    try:
+        for model_name in HILCodec.MODEL_NAMES:
+            codec = HILCodec(sample_rate, model_name=model_name).eval().to(device)
+            input = torch.zeros(batch_size, 100, device=device)
+            codec(input)
+    except Exception as e:
+        logging.warning(e)
+
+    # MagiCodec
+    try:
+        codec = MagiCodec(sample_rate).eval().to(device)
+        input = torch.zeros(batch_size, 100, device=device)
+        codec(input)
+    except Exception as e:
+        logging.warning(e)
+
     # Mimi
     for num_codebooks in range(1, 9):
         try:
@@ -85,6 +146,23 @@ def download_weights():
             codec(input)
         except Exception as e:
             logging.warning(e)
+
+    # NanoCodec
+    try:
+        codec = NanoCodec(sample_rate).eval().to(device)
+        input = torch.zeros(batch_size, 100, device=device)
+        codec(input)
+    except Exception as e:
+        logging.warning(e)
+
+    # PAST
+    try:
+        for model_name in PAST.MODEL_NAMES:
+            codec = PAST(sample_rate, model_name=model_name).eval().to(device)
+            input = torch.zeros(batch_size, 100, device=device)
+            codec(input)
+    except Exception as e:
+        logging.warning(e)
 
     # SemantiCodec
     for token_rate, semantic_vocab_size in zip(
@@ -150,11 +228,23 @@ def download_weights():
         configs = WavTokenizer.CONFIGS
         checkpoints = WavTokenizer.CHECKPOINTS
         for source, config, checkpoint in zip(sources, configs, checkpoints):
-            codec = WavTokenizer(
-                sample_rate, source=source, config=config, checkpoint=checkpoint
-            ).eval()
+            codec = (
+                WavTokenizer(
+                    sample_rate, source=source, config=config, checkpoint=checkpoint
+                )
+                .eval()
+                .to(device)
+            )
             input = torch.zeros(batch_size, 100, device=device)
             codec(input)
+    except Exception as e:
+        logging.warning(e)
+
+    # X-Codec 2.0
+    try:
+        codec = XCodec2(sample_rate).eval().to(device)
+        input = torch.zeros(batch_size, 100, device=device)
+        codec(input)
     except Exception as e:
         logging.warning(e)
 
@@ -162,6 +252,7 @@ def download_weights():
     UTMOS(sample_rate)
     DNSMOS(sample_rate)
     DWER("small", sample_rate, device="cpu")
+    ASRPerplexity("openai-community/gpt2-large", sample_rate, asr_model_hub="small")
     SpkSimWavLM("microsoft/wavlm-base-sv", sample_rate)
     SpkSimECAPATDNN("speechbrain/spkrec-ecapa-voxceleb", sample_rate)
 

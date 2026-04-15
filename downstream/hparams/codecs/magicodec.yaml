@@ -1,0 +1,17 @@
+# ###########################################################################################
+# Codec: MagiCodec
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: magicodec
+
+# Codec parameters
+num_codebooks: 1
+vocab_size: 131072
+embedding_dim: 16
+
+# Codec
+codec: !new:audiocodecs.MagiCodec
+    sample_rate: !ref <sample_rate>
+    num_codebooks: !ref <num_codebooks>
+    mode: !ref <mode>

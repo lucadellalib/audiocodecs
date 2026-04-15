@@ -1,0 +1,177 @@
+# ###########################################################################################
+# Task: Speech language modeling
+# Model: Llama 3 decoder
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+task: slm
+
+# Seed needs to be set at top of YAML
+seed: 0
+__set_seed: !apply:torch.manual_seed [!ref <seed>]
+
+# Output folders
+output_folder: !ref results/<task>/<dataset>/<experiment_name>/<seed>
+save_folder: !ref <output_folder>/save
+cache_folder: !name:huggingface_hub.constants.HUGGINGFACE_HUB_CACHE
+
+# Save options
+compute_metrics: True
+compute_ref_metrics: False
+save_audios: False
+
+# Preprocessing parameters
+train_remove_if_longer: 60.0  # Seconds
+valid_remove_if_longer: 60.0  # Seconds
+test_remove_if_longer: 60.0  # Seconds
+train_remove_if_shorter: 0.0  # Seconds
+valid_remove_if_shorter: 0.0  # Seconds
+test_remove_if_shorter: 0.0  # Seconds
+sorting: ascending
+cache_size: 1.e+10
+
+# Training parameters
+num_epochs: 100
+grad_accumulation_factor: 1
+train_batch_size: 8
+valid_batch_size: 1
+test_batch_size: 1
+dataloader_workers: 4
+nonfinite_patience: 10
+max_grad_norm: 0.01
+precision: fp32
+ckpt_interval_steps: 4000
+keep_checkpoints: 1
+
+# Special tokens
+bos_id: !ref <vocab_size>
+eos_id: !ref <vocab_size> + 1
+
+# Optimizer parameters
+lr: 0.0001
+weight_decay: 0.01
+improvement_threshold: 0.0025
+annealing_factor: 0.9
+patient: 1
+
+# Codec parameters
+mode: reconstruct
+
+# Embedding parameters
+pretrain_embeddings: True  # If True, must match the codec's embedding size
+freeze_embeddings: False
+
+# Decoder parameters
+n_layers: 12
+dim: 512
+n_heads: 4
+n_kv_heads: 1
+dropout: 0.1
+rope_theta: 10000.0
+max_seq_len: 8192
+
+# Search parameters
+top_p: 0.9
+temp: 1.0
+
+# Performance metrics parameters
+perplexity_hub: meta-llama/Llama-3.2-1B
+perplexity_asr_hub: small
+wavlm_sim_hub: microsoft/wavlm-base-sv
+ecapatdnn_sim_hub: speechbrain/spkrec-ecapa-voxceleb
+
+# Modules
+decoder: !new:models.llama3.LlamaDecoder
+    vocab_size: !ref <vocab_size> + 2  # +2 for BOS/EOS
+    input_dim: !ref <embedding_dim>
+    n_layers: !ref <n_layers>
+    dim: !ref <dim>
+    n_heads: !ref <n_heads>
+    n_kv_heads: !ref <n_kv_heads>
+    dropout: !ref <dropout>
+    rope_theta: !ref <rope_theta>
+    max_seq_len: !ref <max_seq_len>
+    num_codebooks: !ref <num_codebooks>
+
+modules:
+    decoder: !ref <decoder>
+
+model: !new:torch.nn.ModuleList
+    [[!ref <decoder>]]
+
+# Loss functions
+ce_loss: !name:speechbrain.nnet.losses.nll_loss
+    label_smoothing: 0.0
+    allowed_len_diff: 0
+    reduction: mean
+
+# Optimizers
+opt_class: !name:torch.optim.AdamW
+    lr: !ref <lr>
+    betas: (0.9, 0.98)
+    eps: 1.e-8
+    weight_decay: !ref <weight_decay>
+
+# Schedulers
+scheduler: !new:speechbrain.nnet.schedulers.NewBobScheduler
+    initial_value: !ref <lr>
+    improvement_threshold: !ref <improvement_threshold>
+    annealing_factor: !ref <annealing_factor>
+    patient: !ref <patient>
+
+# Performance metrics
+ter_computer: !name:speechbrain.utils.metric_stats.MetricStats
+    metric: !name:speechbrain.nnet.losses.classification_error
+        reduction: batch
+
+er_computer: !name:speechbrain.utils.metric_stats.MetricStats
+    metric: !name:speechbrain.nnet.losses.classification_error
+        reduction: batch
+
+utmos_computer: !name:metrics.utmos.UTMOS
+    sample_rate: !ref <sample_rate>
+
+dnsmos_computer: !name:metrics.dnsmos.DNSMOS
+    sample_rate: !ref <sample_rate>
+
+stoi_computer: !name:metrics.stoi.STOI
+    sample_rate: !ref <sample_rate>
+
+pesq_computer: !name:metrics.pesq.PESQ
+    sample_rate: !ref <sample_rate>
+
+meld_computer: !name:metrics.mel_distance.MelDistance
+    sample_rate: !ref <sample_rate>
+
+stftd_computer: !name:metrics.stft_distance.STFTDistance
+    sample_rate: !ref <sample_rate>
+
+perplexity_computer: !name:metrics.perplexity.ASRPerplexity
+    model_hub: !ref <perplexity_hub>
+    asr_model_hub: !ref <perplexity_asr_hub>
+    sample_rate: !ref <sample_rate>
+    save_path: !ref <cache_folder>
+
+wavlm_sim_computer: !name:metrics.speaker_similarity.SpkSimWavLM
+    model_hub: !ref <wavlm_sim_hub>
+    sample_rate: !ref <sample_rate>
+    save_path: !ref <cache_folder>
+
+ecapatdnn_sim_computer: !name:metrics.speaker_similarity.SpkSimECAPATDNN
+    model_hub: !ref <ecapatdnn_sim_hub>
+    sample_rate: !ref <sample_rate>
+    save_path: !apply:os.path.join [!ref <cache_folder>, models--speechbrain--spkrec-ecapa-voxceleb]
+
+# Counters, checkpointers, loggers, etc.
+epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
+    limit: !ref <num_epochs>
+
+checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
+    checkpoints_dir: !ref <save_folder>
+    recoverables:
+        model: !ref <model>
+        scheduler: !ref <scheduler>
+        counter: !ref <epoch_counter>
+
+train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
+    save_file: !ref <output_folder>/train_log.txt

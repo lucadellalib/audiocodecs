@@ -1,0 +1,18 @@
+# ###########################################################################################
+# Codec: WavLM + K-means
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+experiment_name: wavlm_kmeans
+
+# Codec parameters
+num_codebooks: !apply:len [!ref <layer_ids>]
+vocab_size: 512
+embedding_dim: 1024
+layer_ids: [6]
+
+# Codec
+codec: !new:audiocodecs.WavLMKmeans
+    sample_rate: !ref <sample_rate>
+    layer_ids: !ref <layer_ids>
+    mode: !ref <mode>

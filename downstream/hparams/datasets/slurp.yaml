@@ -1,0 +1,14 @@
+# ###########################################################################################
+# Dataset: SLURP
+# Authors: Luca Della Libera 2025
+# ###########################################################################################
+
+dataset: SLURP
+
+# Data preparation
+sample_rate: 16000
+data_folder: !PLACEHOLDER
+train_csv: [!ref <save_folder>/train.csv, train_synthetic.csv]
+valid_csv: !ref <save_folder>/devel.csv
+test_csv: !ref <save_folder>/test.csv
+splits: [train, train_synthetic, devel, test]

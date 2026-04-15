@@ -118,6 +118,15 @@ class Encodec(Codec):
         return feats
 
     # override
+    def _sig_to_qfeats(self, sig, length):
+        # sig: [B, T]
+        toks = self._sig_to_toks(sig, length)
+        toks = toks.movedim(-1, 0)
+        qfeats = self.model.quantizer.decode(toks)
+        qfeats = qfeats.movedim(-1, -2)
+        return qfeats
+
+    # override
     def _toks_to_sig(self, toks, length):
         # toks: [B, N, K]
         if self.vocos is not None:
@@ -130,6 +139,14 @@ class Encodec(Codec):
         output = self.model.decode(toks[None].movedim(-1, -2), [None])
         sig = output.audio_values[:, 0]  # [B, T]
         return sig
+
+    # override
+    def _toks_to_qfeats(self, toks, length):
+        # toks: [B, N, K]
+        toks = toks.movedim(-1, 0)
+        qfeats = self.model.quantizer.decode(toks)
+        qfeats = qfeats.movedim(-1, -2)
+        return qfeats
 
 
 # Test
@@ -165,6 +182,8 @@ if __name__ == "__main__":
                 print(embs.shape)
                 if mode in ["encode", "reconstruct"]:
                     output = codec.sig_to_feats(input)
+                    print(output.shape)
+                    output = codec.sig_to_qfeats(input)
                     print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")

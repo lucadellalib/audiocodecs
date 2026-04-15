@@ -99,6 +99,15 @@ class SpeechTokenizer(Codec):
         return feats
 
     # override
+    def _sig_to_qfeats(self, sig, length):
+        # sig: [B, T]
+        feats = self.model.encoder(sig[:, None])
+        layers = list(range(self.num_codebooks))
+        quantized, *_ = self.model.quantizer(feats, layers=layers)
+        quantized = quantized.movedim(-1, -2)  # [B, N, K]
+        return quantized
+
+    # override
     def _toks_to_sig(self, toks, length):
         # toks: [B, N, K]
         toks = toks.movedim(-1, -3)  # [K, B, N]
@@ -137,6 +146,8 @@ if __name__ == "__main__":
             print(embs.shape)
             if mode in ["encode", "reconstruct"]:
                 output = codec.sig_to_feats(input)
+                print(output.shape)
+                output = codec.sig_to_qfeats(input)
                 print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")

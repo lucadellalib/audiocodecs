@@ -423,7 +423,14 @@ def _conv_flops_compute(
     dilations = dilation if type(dilation) is tuple else (dilation,) * length
 
     output_dims = []
+    paddings = list(paddings)
     for idx, input_dim in enumerate(input_dims):
+        if paddings[idx] == "same":
+            effective_kernel = dilations[idx] * (kernel_dims[idx] - 1) + 1
+            total_padding = max(
+                0, (input_dim - 1) * strides[idx] + effective_kernel - input_dim
+            )
+            paddings[idx] = total_padding // 2
         output_dim = (
             input_dim
             + 2 * paddings[idx]

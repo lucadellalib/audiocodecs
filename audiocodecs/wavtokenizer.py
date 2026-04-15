@@ -103,11 +103,33 @@ class WavTokenizer(Codec):
         return feats
 
     # override
+    def _sig_to_qfeats(self, sig, length):
+        # sig: [B, T]
+        qfeats, _ = self.model.encode(sig, bandwidth_id=0)
+        qfeats = qfeats.movedim(-1, -2)  # [B, N, K]
+        return qfeats
+
+    # override
     def _toks_to_sig(self, toks, length):
         # toks: [B, N, K]
         feats = self.model.codes_to_features(toks.movedim(-1, 0))
         sig = self.model.decode(
             feats, bandwidth_id=torch.tensor(0, device=toks.device)
+        )  # [B, T]
+        return sig
+
+    # override
+    def _toks_to_qfeats(self, toks, length):
+        # toks: [B, N, K=1]
+        qfeats = self.model.codes_to_features(toks.movedim(-1, 0))
+        qfeats = qfeats.movedim(-1, -2)
+        return qfeats
+
+    # override
+    def _feats_to_sig(self, feats, length):
+        sig = self.model.decode(
+            feats.movedim(-1, -2),
+            bandwidth_id=torch.tensor(0, device=feats.device),
         )  # [B, T]
         return sig
 
@@ -134,6 +156,8 @@ if __name__ == "__main__":
             print(embs.shape)
             if mode in ["encode", "reconstruct"]:
                 output = codec.sig_to_feats(input)
+                print(output.shape)
+                output = codec.sig_to_qfeats(input)
                 print(output.shape)
 
     sig, sample_rate = torchaudio.load("example.wav")
